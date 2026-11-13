@@ -53,7 +53,8 @@ export class ColorPickerComponent {
   }
 
   protected colorName(color: string): string {
-    return Object.hasOwn(this.colorNames(), color) ? this.colorNames()[color] : color;
+    const names = this.colorNames();
+    return Object.prototype.hasOwnProperty.call(names, color) ? names[color] : color;
   }
 
   protected pick(color: string): void {

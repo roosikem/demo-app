@@ -54,7 +54,11 @@ export class FaceFrameEditorComponent implements OnDestroy {
   protected readonly features = computed(() => this.opts().features);
   protected readonly colorNames = computed(() => {
     const { colorNames, translate } = this.opts();
-    return Object.fromEntries(Object.entries(colorNames).map(([hex, name]) => [hex, translate(name)]));
+    const translated: Record<string, string> = {};
+    for (const hex of Object.keys(colorNames)) {
+      translated[hex] = translate(colorNames[hex]);
+    }
+    return translated;
   });
   protected readonly bothTabs = computed(() => this.features().customTab && this.features().stencilsTab);
 
@@ -499,7 +503,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
         this.thumbCache.set(s.id, this.renderDataUrl(this.stencilConfig(s), image, photo, THUMB_SIZE * 2));
       }
       index += THUMB_BATCH;
-      this.thumbnails.set(Object.fromEntries(this.thumbCache));
+      this.thumbnails.set(this.thumbnailRecord());
       if (index < list.length) {
         requestAnimationFrame(step);
       }
@@ -507,8 +511,16 @@ export class FaceFrameEditorComponent implements OnDestroy {
     if (list.length) {
       step();
     } else if (Object.keys(untracked(this.thumbnails)).length !== this.thumbCache.size) {
-      this.thumbnails.set(Object.fromEntries(this.thumbCache));
+      this.thumbnails.set(this.thumbnailRecord());
     }
+  }
+
+  private thumbnailRecord(): Record<string, string> {
+    const result: Record<string, string> = {};
+    this.thumbCache.forEach((value, key) => {
+      result[key] = value;
+    });
+    return result;
   }
 
   private scrollToStencil(id: string, focus: boolean): void {
