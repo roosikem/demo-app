@@ -1,0 +1,220 @@
+/* Theme: override the --ff-* variables in the host stylesheet */
+:host {
+  --ff-primary: #00646d;
+  --ff-primary-hover: #00515a;
+  --ff-primary-text: #fff;
+  --ff-primary-soft: #e6f1f2;
+  --ff-text: #101828;
+  --ff-text-2: #475467;
+  --ff-muted: #667085;
+  --ff-border: #d0d5dd;
+  --ff-border-strong: #98a2b3;
+  --ff-surface: #fff;
+  --ff-soft: #f2f4f7;
+  --ff-warn: #b54708;
+  --ff-warn-bg: #fffaeb;
+  --ff-r: 8px;
+  --ff-r-lg: 12px;
+  --ff-ring: color-mix(in srgb, var(--ff-primary) 25%, transparent);
+  --ff-shadow: 0 1px 2px rgb(16 24 40 / 6%);
+  display: block;
+  color: var(--ff-text);
+  font:
+    14px/1.45 system-ui,
+    sans-serif;
+}
+
+.ff-grid {
+  display: grid;
+  grid-template-columns: 384px minmax(400px, 1fr);
+  gap: 40px;
+  align-items: start;
+  max-width: 1100px;
+}
+
+.ff-preview-card {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--ff-border);
+  border-radius: var(--ff-r-lg);
+  background: var(--ff-surface);
+  box-shadow: var(--ff-shadow);
+}
+
+.ff-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  border-radius: var(--ff-r-lg);
+  background: var(--ff-soft);
+}
+.ff-canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 50%;
+  touch-action: none;
+  box-shadow: 0 0 0 1px rgb(16 24 40 / 8%);
+}
+.ff-draggable {
+  cursor: grab;
+}
+.ff-draggable:active {
+  cursor: grabbing;
+}
+.ff-stage--empty .ff-canvas {
+  opacity: 0;
+}
+.ff-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  color: var(--ff-muted);
+  text-align: center;
+}
+.ff-placeholder strong {
+  color: var(--ff-text-2);
+}
+
+.ff-toolbar {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+.ff-slider-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px 52px;
+  gap: 8px;
+  align-items: center;
+}
+.ff-toolbar-foot,
+.ff-chats,
+.ff-export {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ff-hint {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--ff-muted);
+  font-size: 12px;
+}
+.ff-chats {
+  padding: 12px 0;
+  border-top: 1px solid var(--ff-border);
+  border-bottom: 1px solid var(--ff-border);
+}
+.ff-chats img {
+  margin-left: 8px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.ff-actions {
+  display: grid;
+  gap: 10px;
+}
+.ff-export .ff-btn {
+  width: auto;
+  flex: 1;
+}
+.ff-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--ff-r);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ff-btn--primary {
+  border: 0;
+  background: var(--ff-primary);
+  color: var(--ff-primary-text);
+}
+.ff-btn--primary:hover:not(:disabled) {
+  background: var(--ff-primary-hover);
+}
+.ff-btn--secondary {
+  border: 1px solid var(--ff-border-strong);
+  background: var(--ff-surface);
+  color: var(--ff-text);
+}
+.ff-btn--secondary:hover:not(:disabled) {
+  background: var(--ff-soft);
+}
+.ff-btn:disabled,
+.ff-iconbtn:disabled,
+.ff-ghost:disabled,
+.ff-range:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ff-status {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-self: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ff-primary-soft);
+  color: var(--ff-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ff-warning,
+.ff-empty {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--ff-r);
+  background: var(--ff-warn-bg);
+  color: var(--ff-warn);
+}
+.ff-empty {
+  flex-direction: column;
+  max-width: 420px;
+  margin: 24px auto;
+  padding: 24px;
+  border: 1px solid var(--ff-border);
+  background: var(--ff-surface);
+  color: var(--ff-text-2);
+  text-align: center;
+}
+.ff-empty p {
+  margin: 0;
+}
+
+:is(button, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--ff-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .ff-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .ff-preview-card {
+    position: static;
+  }
+  .ff-slider-row {
+    grid-template-columns: 32px 1fr 32px 48px;
+  }
+}

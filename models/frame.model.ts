@@ -1,0 +1,89 @@
+// Sizes are fractions of the outer radius, angles are degrees (0 = top, clockwise).
+
+export type RingFill =
+  | { readonly type: 'solid'; readonly color: string }
+  | { readonly type: 'gradient'; readonly colors: readonly string[] }
+  | { readonly type: 'segments'; readonly colors: readonly string[] };
+
+export interface RingLayer {
+  readonly fill: RingFill;
+  /** 0.05 .. 0.35 */
+  readonly width: number;
+  /** Partial ring, omitted = full circle. */
+  readonly arc?: { readonly start: number; readonly end: number };
+  readonly innerLine?: { readonly color: string; readonly width: number };
+}
+
+/** cw: for text at the top / sides, ccw: for text at the bottom (stays upright). */
+export interface ArcText {
+  readonly text: string;
+  readonly color: string;
+  readonly center: number;
+  readonly direction: 'cw' | 'ccw';
+  /** Max. angle in degrees, the font shrinks to fit. */
+  readonly maxSpan?: number;
+  readonly fontFamily?: string;
+  readonly fontWeight?: number;
+  /** Fraction of the font size. */
+  readonly letterSpacing?: number;
+}
+
+export type BadgeIcon = 'none' | 'star' | 'check' | 'heart' | 'cloud';
+
+export interface BubbleBadge {
+  readonly shape: 'bubble';
+  readonly color: string;
+  readonly textColor: string;
+  readonly lines: readonly string[];
+  readonly angle: number;
+  readonly icon?: BadgeIcon;
+}
+
+export interface DiagonalBadge {
+  readonly shape: 'diagonal';
+  readonly color: string;
+  readonly textColor: string;
+  readonly title: string;
+  readonly titleColors?: readonly string[];
+  readonly lines: readonly string[];
+}
+
+export type Badge = BubbleBadge | DiagonalBadge;
+
+export interface Decoration {
+  readonly symbol: string;
+  readonly angle: number;
+  readonly color: string;
+}
+
+export interface FrameConfig {
+  readonly ring: RingLayer | null;
+  readonly texts: readonly ArcText[];
+  readonly badge?: Badge;
+  readonly decorations?: readonly Decoration[];
+  /** 'outer' fills the whole circle, used with partial rings. */
+  readonly photoClip: 'inner' | 'outer';
+  readonly photoBackground: string;
+}
+
+export interface PhotoTransform {
+  /** 1 = photo covers the circle */
+  readonly zoom: number;
+  readonly rotation: number;
+  /** -0.5 .. 0.5 of the photo circle diameter */
+  readonly offsetX: number;
+  readonly offsetY: number;
+}
+
+export const DEFAULT_PHOTO: PhotoTransform = { zoom: 1, rotation: 0, offsetX: 0, offsetY: 0 };
+
+export interface Stencil {
+  readonly id: string;
+  readonly label: string;
+  readonly config: FrameConfig;
+  readonly category?: string;
+  /** Extra search words. */
+  readonly tags?: readonly string[];
+}
+
+export type ExportFormat = 'image/png' | 'image/jpeg';

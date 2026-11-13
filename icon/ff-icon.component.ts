@@ -1,0 +1,17 @@
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+
+export type FfIconName =
+  | 'zoom-in' | 'zoom-out' | 'rotate-left' | 'rotate-right' | 'reset' | 'download' | 'show' | 'chevron' | 'check'
+  | 'move' | 'warn' | 'user' | 'plus';
+
+@Component({
+  selector: 'app-ff-icon',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'ff-icon.component', 'aria-hidden': 'true' },
+  templateUrl: './ff-icon.component.html',
+  styleUrl: './ff-icon.component.scss',
+})
+export class FfIconComponent {
+  readonly name = input.required<FfIconName>();
+  readonly size = input(18);
+}

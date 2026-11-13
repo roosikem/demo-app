@@ -1,0 +1,36 @@
+<span class="cp-label" [id]="id + '-label'">{{ label() }}</span>
+<div class="cp-row" role="radiogroup" [attr.aria-labelledby]="id + '-label'">
+  @for (c of swatches(); track c) {
+    <button type="button" role="radio" class="cp-swatch" [style.background]="c"
+            [attr.aria-checked]="value() === c" [attr.aria-label]="colorName(c)" [title]="colorName(c)"
+            (click)="pick(c)"></button>
+  }
+  <button type="button" class="cp-swatch cp-custom" [class.cp-active]="isCustom()"
+          [style.--cp-current]="value()" aria-haspopup="dialog" [attr.aria-expanded]="open()"
+          [attr.aria-label]="customLabel()" [title]="customLabel()" (click)="toggle()">
+    <span aria-hidden="true">+</span>
+  </button>
+</div>
+
+@if (open()) {
+  <div class="cp-panel" role="dialog" [attr.aria-label]="customLabel()">
+    <div class="cp-area" role="slider" tabindex="0" #area
+         [style.background-color]="hueColor()"
+         [attr.aria-label]="areaLabel()" aria-valuemin="0" aria-valuemax="100"
+     [attr.aria-valuenow]="saturationPercent()" [attr.aria-valuetext]="value()"
+         (pointerdown)="onAreaDown($event, area)" (pointermove)="onAreaMove($event, area)"
+         (pointerup)="dragging = false" (pointercancel)="dragging = false" (keydown)="onAreaKey($event)">
+      <span class="cp-thumb" [style.left.%]="hsv().s * 100" [style.top.%]="(1 - hsv().v) * 100"
+            [style.background]="value()"></span>
+    </div>
+    <input class="cp-hue" type="range" min="0" max="359" step="1" [attr.aria-label]="hueLabel()"
+           [value]="hsv().h" (input)="setHsv({ h: number($event) })" />
+    <div class="cp-row">
+      <span class="cp-preview" [style.background]="value()"></span>
+      <input class="cp-hex" type="text" maxlength="7" spellcheck="false" [attr.aria-label]="hexLabel()"
+             [class.cp-invalid]="hexInvalid()" [value]="hexDraft()"
+             (input)="onHexInput($event)" (blur)="hexDraft.set(value())" />
+      <button type="button" class="cp-done" (click)="close(true)">{{ doneLabel() }}</button>
+    </div>
+  </div>
+}
