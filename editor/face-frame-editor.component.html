@@ -9,13 +9,23 @@
   <div class="ff-grid">
     <aside class="ff-preview-card">
       <div class="ff-stage" [class.ff-stage--empty]="!hasImage()">
-        <canvas #preview class="ff-canvas" tabindex="0" role="img"
-                [class.ff-draggable]="hasImage()"
-                [style.width.px]="o.previewSize" [style.height.px]="o.previewSize"
-                [attr.aria-label]="t().previewHint" [attr.aria-describedby]="uid + '-drag-hint'"
-                (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)"
-                (pointerup)="onPointerUp($event)" (pointercancel)="onPointerUp($event)"
-                (wheel)="onWheel($event)" (keydown)="onKey($event)"></canvas>
+        <canvas
+          #preview
+          class="ff-canvas"
+          tabindex="0"
+          role="img"
+          [class.ff-draggable]="hasImage()"
+          [style.width.px]="o.previewSize"
+          [style.height.px]="o.previewSize"
+          [attr.aria-label]="t().previewHint"
+          [attr.aria-describedby]="uid + '-drag-hint'"
+          (pointerdown)="onPointerDown($event)"
+          (pointermove)="onPointerMove($event)"
+          (pointerup)="onPointerUp($event)"
+          (pointercancel)="onPointerUp($event)"
+          (wheel)="onWheel($event)"
+          (keydown)="onKey($event)"
+        ></canvas>
         @if (!hasImage() && !loadError()) {
           <div class="ff-placeholder">
             <app-ff-icon name="user" [size]="32" />
@@ -31,29 +41,79 @@
       @if (f.photoControls) {
         <div class="ff-toolbar" role="group" [attr.aria-label]="t().photoAdjust">
           <div class="ff-slider-row">
-            <button type="button" class="ff-iconbtn" [disabled]="!hasImage()" [attr.aria-label]="t().zoomOut"
-                    (click)="zoomBy(-1)"><app-ff-icon name="zoom-out" /></button>
-            <input [id]="uid + '-zoom'" class="ff-range" type="range" step="0.01" [attr.aria-label]="t().zoom"
-                   [min]="o.zoom.min" [max]="o.zoom.max" [value]="photo().zoom" [disabled]="!hasImage()"
-                   [style.--p.%]="(photo().zoom - o.zoom.min) / (o.zoom.max - o.zoom.min) * 100"
-                   (input)="setPhoto({ zoom: number($event) })" />
-            <button type="button" class="ff-iconbtn" [disabled]="!hasImage()" [attr.aria-label]="t().zoomIn"
-                    (click)="zoomBy(1)"><app-ff-icon name="zoom-in" /></button>
-            <output class="ff-chip" [attr.for]="uid + '-zoom'">{{ photo().zoom.toFixed(2) }}×</output>
+            <button
+              type="button"
+              class="ff-iconbtn"
+              [disabled]="!hasImage()"
+              [attr.aria-label]="t().zoomOut"
+              (click)="zoomBy(-1)"
+            >
+              <app-ff-icon name="zoom-out" />
+            </button>
+            <input
+              [id]="uid + '-zoom'"
+              class="ff-range"
+              type="range"
+              step="0.01"
+              [attr.aria-label]="t().zoom"
+              [min]="o.zoom.min"
+              [max]="o.zoom.max"
+              [value]="photo().zoom"
+              [disabled]="!hasImage()"
+              [style.--p.%]="((photo().zoom - o.zoom.min) / (o.zoom.max - o.zoom.min)) * 100"
+              (input)="setPhoto({ zoom: number($event) })"
+            />
+            <button
+              type="button"
+              class="ff-iconbtn"
+              [disabled]="!hasImage()"
+              [attr.aria-label]="t().zoomIn"
+              (click)="zoomBy(1)"
+            >
+              <app-ff-icon name="zoom-in" />
+            </button>
+            <output class="ff-chip" [attr.for]="uid + '-zoom'"
+              >{{ photo().zoom.toFixed(2) }}×</output
+            >
           </div>
           <div class="ff-slider-row">
-            <button type="button" class="ff-iconbtn" [disabled]="!hasImage()" [attr.aria-label]="t().rotateLeft"
-                    (click)="rotateBy(-90)"><app-ff-icon name="rotate-left" /></button>
-            <input [id]="uid + '-rotation'" class="ff-range" type="range" min="-180" max="180" step="1"
-                   [attr.aria-label]="t().rotation" [value]="photo().rotation" [disabled]="!hasImage()"
-                   [style.--p.%]="(photo().rotation + 180) / 360 * 100"
-                   (input)="setPhoto({ rotation: number($event) })" />
-            <button type="button" class="ff-iconbtn" [disabled]="!hasImage()" [attr.aria-label]="t().rotateRight"
-                    (click)="rotateBy(90)"><app-ff-icon name="rotate-right" /></button>
+            <button
+              type="button"
+              class="ff-iconbtn"
+              [disabled]="!hasImage()"
+              [attr.aria-label]="t().rotateLeft"
+              (click)="rotateBy(-90)"
+            >
+              <app-ff-icon name="rotate-left" />
+            </button>
+            <input
+              [id]="uid + '-rotation'"
+              class="ff-range"
+              type="range"
+              min="-180"
+              max="180"
+              step="1"
+              [attr.aria-label]="t().rotation"
+              [value]="photo().rotation"
+              [disabled]="!hasImage()"
+              [style.--p.%]="((photo().rotation + 180) / 360) * 100"
+              (input)="setPhoto({ rotation: number($event) })"
+            />
+            <button
+              type="button"
+              class="ff-iconbtn"
+              [disabled]="!hasImage()"
+              [attr.aria-label]="t().rotateRight"
+              (click)="rotateBy(90)"
+            >
+              <app-ff-icon name="rotate-right" />
+            </button>
             <output class="ff-chip" [attr.for]="uid + '-rotation'">{{ photo().rotation }}°</output>
           </div>
           <div class="ff-toolbar-foot">
-            <small class="ff-hint" [id]="uid + '-drag-hint'"><app-ff-icon name="move" [size]="14" />{{ t().dragHintShort }}</small>
+            <small class="ff-hint" [id]="uid + '-drag-hint'"
+              ><app-ff-icon name="move" [size]="14" />{{ t().dragHintShort }}</small
+            >
             <button type="button" class="ff-ghost" [disabled]="!hasImage()" (click)="resetPhoto()">
               <app-ff-icon name="reset" [size]="16" />{{ t().reset }}
             </button>
@@ -64,7 +124,13 @@
       @if (f.chatPreview && smallPreview()) {
         <div class="ff-chats">
           <span class="ff-label">{{ t().smallPreview }}</span>
-          <span><img [src]="smallPreview()" alt="" width="48" height="48" /><img [src]="smallPreview()" alt="" width="32" height="32" /></span>
+          <span
+            ><img [src]="smallPreview()" alt="" width="48" height="48" /><img
+              [src]="smallPreview()"
+              alt=""
+              width="32"
+              height="32"
+          /></span>
         </div>
       }
 
@@ -72,12 +138,23 @@
         <div class="ff-actions">
           @if (f.showInPhoto) {
             @if (shownInPhoto()) {
-              <span class="ff-status" role="status"><app-ff-icon name="check" [size]="14" />{{ t().shownStatus }}</span>
-              <button type="button" class="ff-btn ff-btn--secondary" (click)="resetPhotoView.emit()">
+              <span class="ff-status" role="status"
+                ><app-ff-icon name="check" [size]="14" />{{ t().shownStatus }}</span
+              >
+              <button
+                type="button"
+                class="ff-btn ff-btn--secondary"
+                (click)="resetPhotoView.emit()"
+              >
                 <app-ff-icon name="reset" />{{ t().resetPhotoView }}
               </button>
             } @else {
-              <button type="button" class="ff-btn ff-btn--primary" [disabled]="!hasImage()" (click)="onShowInPhoto()">
+              <button
+                type="button"
+                class="ff-btn ff-btn--primary"
+                [disabled]="!hasImage()"
+                (click)="onShowInPhoto()"
+              >
                 <app-ff-icon name="show" />{{ t().showInPhoto }}
               </button>
             }
@@ -88,13 +165,23 @@
                 <div class="ff-seg ff-seg--sm" role="radiogroup" [attr.aria-label]="t().format">
                   @for (fmt of o.download.formats; track fmt) {
                     <label>
-                      <input type="radio" [name]="uid + '-format'" [checked]="format() === fmt" (change)="setFormat(fmt)" />
+                      <input
+                        type="radio"
+                        [name]="uid + '-format'"
+                        [checked]="format() === fmt"
+                        (change)="setFormat(fmt)"
+                      />
                       <span>{{ formatLabel(fmt) }}</span>
                     </label>
                   }
                 </div>
               }
-              <button type="button" class="ff-btn ff-btn--secondary" [disabled]="!hasImage()" (click)="download()">
+              <button
+                type="button"
+                class="ff-btn ff-btn--secondary"
+                [disabled]="!hasImage()"
+                (click)="download()"
+              >
                 <app-ff-icon name="download" />{{ t().download }}
               </button>
             </div>
@@ -105,46 +192,96 @@
 
     <section class="ff-panel">
       @if (bothTabs()) {
-        <div class="ff-tabs" role="tablist" [attr.aria-label]="t().tabsLabel" (keydown)="onTabKey($event)">
-          <button type="button" role="tab" class="ff-tab" [id]="uid + '-tab-custom'" [attr.aria-controls]="uid + '-panel'"
-                  [attr.aria-selected]="tab() === 'custom'" [attr.tabindex]="tab() === 'custom' ? 0 : -1"
-                  (click)="selectTab('custom')">{{ t().tabCustom }}</button>
-          <button type="button" role="tab" class="ff-tab" [id]="uid + '-tab-stencils'" [attr.aria-controls]="uid + '-panel'"
-                  [attr.aria-selected]="tab() === 'stencils'" [attr.tabindex]="tab() === 'stencils' ? 0 : -1"
-                  (click)="selectTab('stencils')">{{ t().tabStencils }}</button>
+        <div
+          class="ff-tabs"
+          role="tablist"
+          [attr.aria-label]="t().tabsLabel"
+          (keydown)="onTabKey($event)"
+        >
+          <button
+            type="button"
+            role="tab"
+            class="ff-tab"
+            [id]="uid + '-tab-custom'"
+            [attr.aria-controls]="uid + '-panel'"
+            [attr.aria-selected]="tab() === 'custom'"
+            [attr.tabindex]="tab() === 'custom' ? 0 : -1"
+            (click)="selectTab('custom')"
+          >
+            {{ t().tabCustom }}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="ff-tab"
+            [id]="uid + '-tab-stencils'"
+            [attr.aria-controls]="uid + '-panel'"
+            [attr.aria-selected]="tab() === 'stencils'"
+            [attr.tabindex]="tab() === 'stencils' ? 0 : -1"
+            (click)="selectTab('stencils')"
+          >
+            {{ t().tabStencils }}
+          </button>
         </div>
       }
 
-      <div [id]="uid + '-panel'" [attr.role]="bothTabs() ? 'tabpanel' : null"
-           [attr.aria-labelledby]="bothTabs() ? uid + '-tab-' + tab() : null">
+      <div
+        [id]="uid + '-panel'"
+        [attr.role]="bothTabs() ? 'tabpanel' : null"
+        [attr.aria-labelledby]="bothTabs() ? uid + '-tab-' + tab() : null"
+      >
         @if (tab() === 'custom') {
           @let s = custom();
 
           <div class="ff-section">
             <header class="ff-section-h">
               <h3>{{ t().sectionRing }}</h3>
-              <button type="button" class="ff-ghost" (click)="resetCustom()"><app-ff-icon name="reset" [size]="16" />{{ t().resetFrame }}</button>
+              <button type="button" class="ff-ghost" (click)="resetCustom()">
+                <app-ff-icon name="reset" [size]="16" />{{ t().resetFrame }}
+              </button>
             </header>
             <div class="ff-seg" role="radiogroup" [attr.aria-label]="t().ringStyle">
               @for (style of ringStyles; track style) {
                 <label>
-                  <input type="radio" [name]="uid + '-ring-style'" [checked]="s.ringStyle === style"
-                         (change)="patch({ ringStyle: style })" />
+                  <input
+                    type="radio"
+                    [name]="uid + '-ring-style'"
+                    [checked]="s.ringStyle === style"
+                    (change)="patch({ ringStyle: style })"
+                  />
                   <span>{{ ringStyleLabel(style) }}</span>
                 </label>
               }
             </div>
             @if (s.ringStyle === 'solid') {
-              <app-color-picker [label]="t().ringColor" [customLabel]="t().customColor" [areaLabel]="t().colorArea" [hueLabel]="t().colorHue"
-                                [hexLabel]="t().colorHex" [doneLabel]="t().colorDone" [colorNames]="colorNames()" [swatches]="o.swatches"
-                                [value]="s.ringColor" (valueChange)="patch({ ringColor: $event })" />
+              <app-color-picker
+                [label]="t().ringColor"
+                [customLabel]="t().customColor"
+                [areaLabel]="t().colorArea"
+                [hueLabel]="t().colorHue"
+                [hexLabel]="t().colorHex"
+                [doneLabel]="t().colorDone"
+                [colorNames]="colorNames()"
+                [swatches]="o.swatches"
+                [value]="s.ringColor"
+                (valueChange)="patch({ ringColor: $event })"
+              />
             } @else {
               <div class="ff-field">
                 <span class="ff-label" [id]="uid + '-palette'">{{ t().palette }}</span>
-                <div class="ff-palettes" role="radiogroup" [attr.aria-labelledby]="uid + '-palette'">
+                <div
+                  class="ff-palettes"
+                  role="radiogroup"
+                  [attr.aria-labelledby]="uid + '-palette'"
+                >
                   @for (p of o.palettes; track p.id) {
-                    <button type="button" role="radio" class="ff-palette" [attr.aria-checked]="s.paletteId === p.id"
-                            (click)="patch({ paletteId: p.id })">
+                    <button
+                      type="button"
+                      role="radio"
+                      class="ff-palette"
+                      [attr.aria-checked]="s.paletteId === p.id"
+                      (click)="patch({ paletteId: p.id })"
+                    >
                       <span class="ff-palette-bar" [style.background]="paletteGradient(p)"></span>
                       <span>{{ tr(p.label) }}</span>
                     </button>
@@ -157,89 +294,196 @@
                 <label [attr.for]="uid + '-width'">{{ t().ringWidth }}</label>
                 <output class="ff-chip" [attr.for]="uid + '-width'">{{ s.ringWidth }}%</output>
               </div>
-              <input [id]="uid + '-width'" class="ff-range" type="range" step="1" [min]="ringWidth.min" [max]="ringWidth.max" [value]="s.ringWidth"
-                     [style.--p.%]="(s.ringWidth - ringWidth.min) / (ringWidth.max - ringWidth.min) * 100" (input)="patch({ ringWidth: number($event) })" />
+              <input
+                [id]="uid + '-width'"
+                class="ff-range"
+                type="range"
+                step="1"
+                [min]="ringWidth.min"
+                [max]="ringWidth.max"
+                [value]="s.ringWidth"
+                [style.--p.%]="
+                  ((s.ringWidth - ringWidth.min) / (ringWidth.max - ringWidth.min)) * 100
+                "
+                (input)="patch({ ringWidth: number($event) })"
+              />
             </div>
             <label class="ff-check">
-              <input type="checkbox" [checked]="s.innerLine" (change)="patch({ innerLine: checked($event) })" />
+              <input
+                type="checkbox"
+                [checked]="s.innerLine"
+                (change)="patch({ innerLine: checked($event) })"
+              />
               <span>{{ t().innerLine }}</span>
             </label>
           </div>
 
           <div class="ff-section">
-            <header class="ff-section-h"><h3>{{ t().sectionText }}</h3></header>
+            <header class="ff-section-h">
+              <h3>{{ t().sectionText }}</h3>
+            </header>
             <div class="ff-field">
               <label [attr.for]="uid + '-font'">{{ t().font }}</label>
-              <select [id]="uid + '-font'" class="ff-select" (change)="patch({ fontFamily: text($event) })">
+              <select
+                [id]="uid + '-font'"
+                class="ff-select"
+                (change)="patch({ fontFamily: text($event) })"
+              >
                 @for (font of o.fonts; track font) {
-                  <option [value]="font" [selected]="font === s.fontFamily" [style.font-family]="font">{{ font.split(',')[0] }}</option>
+                  <option
+                    [value]="font"
+                    [selected]="font === s.fontFamily"
+                    [style.font-family]="font"
+                  >
+                    {{ font.split(',')[0] }}
+                  </option>
                 }
               </select>
             </div>
             <div class="ff-field">
               <label [attr.for]="uid + '-top'">{{ t().topText }}</label>
-              <input [id]="uid + '-top'" class="ff-input" type="text" [maxLength]="o.textMaxLength" [value]="s.topText"
-                     (input)="patch({ topText: text($event) })" />
-              <app-color-picker [label]="t().topColor" [customLabel]="t().customColor" [areaLabel]="t().colorArea" [hueLabel]="t().colorHue"
-                                [hexLabel]="t().colorHex" [doneLabel]="t().colorDone" [colorNames]="colorNames()" [swatches]="o.textSwatches"
-                                [value]="s.topColor" (valueChange)="patch({ topColor: $event })" />
+              <input
+                [id]="uid + '-top'"
+                class="ff-input"
+                type="text"
+                [maxLength]="o.textMaxLength"
+                [value]="s.topText"
+                (input)="patch({ topText: text($event) })"
+              />
+              <app-color-picker
+                [label]="t().topColor"
+                [customLabel]="t().customColor"
+                [areaLabel]="t().colorArea"
+                [hueLabel]="t().colorHue"
+                [hexLabel]="t().colorHex"
+                [doneLabel]="t().colorDone"
+                [colorNames]="colorNames()"
+                [swatches]="o.textSwatches"
+                [value]="s.topColor"
+                (valueChange)="patch({ topColor: $event })"
+              />
               @if (topContrastLow()) {
-                <span class="ff-note" role="status"><app-ff-icon name="warn" [size]="14" />{{ t().lowContrast }}</span>
+                <span class="ff-note" role="status"
+                  ><app-ff-icon name="warn" [size]="14" />{{ t().lowContrast }}</span
+                >
               }
             </div>
             <div class="ff-field">
               <label [attr.for]="uid + '-bottom'">{{ t().bottomText }}</label>
-              <input [id]="uid + '-bottom'" class="ff-input" type="text" [maxLength]="o.textMaxLength" [value]="s.bottomText"
-                     (input)="patch({ bottomText: text($event) })" />
-              <app-color-picker [label]="t().bottomColor" [customLabel]="t().customColor" [areaLabel]="t().colorArea" [hueLabel]="t().colorHue"
-                                [hexLabel]="t().colorHex" [doneLabel]="t().colorDone" [colorNames]="colorNames()" [swatches]="o.textSwatches"
-                                [value]="s.bottomColor" (valueChange)="patch({ bottomColor: $event })" />
+              <input
+                [id]="uid + '-bottom'"
+                class="ff-input"
+                type="text"
+                [maxLength]="o.textMaxLength"
+                [value]="s.bottomText"
+                (input)="patch({ bottomText: text($event) })"
+              />
+              <app-color-picker
+                [label]="t().bottomColor"
+                [customLabel]="t().customColor"
+                [areaLabel]="t().colorArea"
+                [hueLabel]="t().colorHue"
+                [hexLabel]="t().colorHex"
+                [doneLabel]="t().colorDone"
+                [colorNames]="colorNames()"
+                [swatches]="o.textSwatches"
+                [value]="s.bottomColor"
+                (valueChange)="patch({ bottomColor: $event })"
+              />
               @if (bottomContrastLow()) {
-                <span class="ff-note" role="status"><app-ff-icon name="warn" [size]="14" />{{ t().lowContrast }}</span>
+                <span class="ff-note" role="status"
+                  ><app-ff-icon name="warn" [size]="14" />{{ t().lowContrast }}</span
+                >
               }
             </div>
           </div>
 
           @if (f.badge) {
             <div class="ff-section">
-              <header class="ff-section-h"><h3>{{ t().badge }}</h3></header>
+              <header class="ff-section-h">
+                <h3>{{ t().badge }}</h3>
+              </header>
               <div class="ff-field">
                 <label [attr.for]="uid + '-badge'">{{ t().badgeType }}</label>
-                <select [id]="uid + '-badge'" class="ff-select" (change)="patch({ badge: $any(text($event)) })">
+                <select
+                  [id]="uid + '-badge'"
+                  class="ff-select"
+                  (change)="patch({ badge: $any(text($event)) })"
+                >
                   <option value="none" [selected]="s.badge === 'none'">{{ t().badgeNone }}</option>
-                  <option value="bubble" [selected]="s.badge === 'bubble'">{{ t().badgeBubble }}</option>
-                  <option value="diagonal" [selected]="s.badge === 'diagonal'">{{ t().badgeDiagonal }}</option>
+                  <option value="bubble" [selected]="s.badge === 'bubble'">
+                    {{ t().badgeBubble }}
+                  </option>
+                  <option value="diagonal" [selected]="s.badge === 'diagonal'">
+                    {{ t().badgeDiagonal }}
+                  </option>
                 </select>
               </div>
               @if (s.badge !== 'none') {
                 <div class="ff-two">
                   <div class="ff-field">
                     <label [attr.for]="uid + '-b1'">{{ t().badgeLine1 }}</label>
-                    <input [id]="uid + '-b1'" class="ff-input" type="text" [maxLength]="o.badgeLineMaxLength" [value]="s.badgeLine1"
-                           (input)="patch({ badgeLine1: text($event) })" />
+                    <input
+                      [id]="uid + '-b1'"
+                      class="ff-input"
+                      type="text"
+                      [maxLength]="o.badgeLineMaxLength"
+                      [value]="s.badgeLine1"
+                      (input)="patch({ badgeLine1: text($event) })"
+                    />
                   </div>
                   <div class="ff-field">
                     <label [attr.for]="uid + '-b2'">{{ t().badgeLine2 }}</label>
-                    <input [id]="uid + '-b2'" class="ff-input" type="text" [maxLength]="o.badgeLineMaxLength" [value]="s.badgeLine2"
-                           (input)="patch({ badgeLine2: text($event) })" />
+                    <input
+                      [id]="uid + '-b2'"
+                      class="ff-input"
+                      type="text"
+                      [maxLength]="o.badgeLineMaxLength"
+                      [value]="s.badgeLine2"
+                      (input)="patch({ badgeLine2: text($event) })"
+                    />
                   </div>
                 </div>
                 @if (s.badge === 'bubble') {
                   <div class="ff-field">
                     <label [attr.for]="uid + '-icon'">{{ t().badgeIcon }}</label>
-                    <select [id]="uid + '-icon'" class="ff-select" (change)="patch({ badgeIcon: $any(text($event)) })">
+                    <select
+                      [id]="uid + '-icon'"
+                      class="ff-select"
+                      (change)="patch({ badgeIcon: $any(text($event)) })"
+                    >
                       @for (i of o.badgeIcons; track i) {
-                        <option [value]="i" [selected]="i === s.badgeIcon">{{ iconLabel(i) }}</option>
+                        <option [value]="i" [selected]="i === s.badgeIcon">
+                          {{ iconLabel(i) }}
+                        </option>
                       }
                     </select>
                   </div>
                 }
-                <app-color-picker [label]="t().badgeColor" [customLabel]="t().customColor" [areaLabel]="t().colorArea" [hueLabel]="t().colorHue"
-                                [hexLabel]="t().colorHex" [doneLabel]="t().colorDone" [colorNames]="colorNames()" [swatches]="o.swatches"
-                                  [value]="s.badgeColor" (valueChange)="patch({ badgeColor: $event })" />
-                <app-color-picker [label]="t().badgeTextColor" [customLabel]="t().customColor" [areaLabel]="t().colorArea" [hueLabel]="t().colorHue"
-                                [hexLabel]="t().colorHex" [doneLabel]="t().colorDone" [colorNames]="colorNames()" [swatches]="o.textSwatches"
-                                  [value]="s.badgeTextColor" (valueChange)="patch({ badgeTextColor: $event })" />
+                <app-color-picker
+                  [label]="t().badgeColor"
+                  [customLabel]="t().customColor"
+                  [areaLabel]="t().colorArea"
+                  [hueLabel]="t().colorHue"
+                  [hexLabel]="t().colorHex"
+                  [doneLabel]="t().colorDone"
+                  [colorNames]="colorNames()"
+                  [swatches]="o.swatches"
+                  [value]="s.badgeColor"
+                  (valueChange)="patch({ badgeColor: $event })"
+                />
+                <app-color-picker
+                  [label]="t().badgeTextColor"
+                  [customLabel]="t().customColor"
+                  [areaLabel]="t().colorArea"
+                  [hueLabel]="t().colorHue"
+                  [hexLabel]="t().colorHex"
+                  [doneLabel]="t().colorDone"
+                  [colorNames]="colorNames()"
+                  [swatches]="o.textSwatches"
+                  [value]="s.badgeTextColor"
+                  (valueChange)="patch({ badgeTextColor: $event })"
+                />
               }
             </div>
           }
@@ -248,21 +492,36 @@
             @if (f.stencilSearch || f.stencilDropdown) {
               <div class="ff-finder-row">
                 @if (f.stencilSearch) {
-                  <input type="search" class="ff-input ff-search" [attr.aria-label]="t().searchStencils"
-                         [placeholder]="t().searchStencils" [value]="query()" (input)="setQuery($event)" />
+                  <input
+                    type="search"
+                    class="ff-input ff-search"
+                    [maxLength]="searchMaxLength"
+                    [attr.aria-label]="t().searchStencils"
+                    [placeholder]="t().searchStencils"
+                    [value]="query()"
+                    (input)="setQuery($event)"
+                  />
                 }
                 @if (f.stencilDropdown) {
-                  <select class="ff-select ff-jump" [attr.aria-label]="t().jumpToStencil" (change)="jumpTo(text($event))">
+                  <select
+                    class="ff-select ff-jump"
+                    [attr.aria-label]="t().jumpToStencil"
+                    (change)="jumpTo(text($event))"
+                  >
                     @for (g of stencilGroups(); track g.category) {
                       @if (g.category) {
                         <optgroup [label]="tr(g.category)">
                           @for (st of g.stencils; track st.id) {
-                            <option [value]="st.id" [selected]="st.id === stencilId()">{{ tr(st.label) }}</option>
+                            <option [value]="st.id" [selected]="st.id === stencilId()">
+                              {{ tr(st.label) }}
+                            </option>
                           }
                         </optgroup>
                       } @else {
                         @for (st of g.stencils; track st.id) {
-                          <option [value]="st.id" [selected]="st.id === stencilId()">{{ tr(st.label) }}</option>
+                          <option [value]="st.id" [selected]="st.id === stencilId()">
+                            {{ tr(st.label) }}
+                          </option>
                         }
                       }
                     }
@@ -272,11 +531,25 @@
             }
             @if (f.stencilCategories && categories().length > 1) {
               <div class="ff-chips" role="radiogroup" [attr.aria-label]="t().categoriesLabel">
-                <button type="button" role="radio" class="ff-chip-btn" [attr.aria-checked]="category() === null"
-                        (click)="setCategory(null)">{{ t().allCategories }}</button>
+                <button
+                  type="button"
+                  role="radio"
+                  class="ff-chip-btn"
+                  [attr.aria-checked]="category() === null"
+                  (click)="setCategory(null)"
+                >
+                  {{ t().allCategories }}
+                </button>
                 @for (c of categories(); track c) {
-                  <button type="button" role="radio" class="ff-chip-btn" [attr.aria-checked]="category() === c"
-                          (click)="setCategory(c)">{{ tr(c) }}</button>
+                  <button
+                    type="button"
+                    role="radio"
+                    class="ff-chip-btn"
+                    [attr.aria-checked]="category() === c"
+                    (click)="setCategory(c)"
+                  >
+                    {{ tr(c) }}
+                  </button>
                 }
               </div>
             }
@@ -285,20 +558,37 @@
               @if (selectedHidden()) {
                 <span class="ff-pinned">
                   {{ t().selectedPinned }} <strong>{{ tr(selectedStencil()?.label ?? '') }}</strong>
-                  <button type="button" class="ff-ghost" (click)="showSelectedStencil()">{{ t().showSelected }}</button>
+                  <button type="button" class="ff-ghost" (click)="showSelectedStencil()">
+                    {{ t().showSelected }}
+                  </button>
                 </span>
               }
             </div>
           </div>
 
           @if (visibleStencils().length) {
-            <div class="ff-gallery" [style.--ff-thumb.px]="thumbSize" role="radiogroup" [attr.aria-label]="t().tabStencils" (keydown)="onGalleryKey($event)">
+            <div
+              class="ff-gallery"
+              [style.--ff-thumb.px]="thumbSize"
+              role="radiogroup"
+              [attr.aria-label]="t().tabStencils"
+              (keydown)="onGalleryKey($event)"
+            >
               @for (st of visibleStencils(); track st.id) {
-                <button type="button" role="radio" class="ff-stencil" [id]="uid + '-st-' + st.id"
-                        [attr.aria-checked]="stencilId() === st.id"
-                        [attr.tabindex]="focusableStencilId() === st.id ? 0 : -1"
-                        (click)="selectStencil(st.id)">
-                  <span class="ff-stencil-check"><app-ff-icon name="check" [size]="12" /><span class="ff-sr">{{ t().selected }}</span></span>
+                <button
+                  type="button"
+                  role="radio"
+                  class="ff-stencil"
+                  [id]="uid + '-st-' + st.id"
+                  [attr.aria-checked]="stencilId() === st.id"
+                  [attr.tabindex]="focusableStencilId() === st.id ? 0 : -1"
+                  (click)="selectStencil(st.id)"
+                >
+                  <span class="ff-stencil-check"
+                    ><app-ff-icon name="check" [size]="12" /><span class="ff-sr">{{
+                      t().selected
+                    }}</span></span
+                  >
                   @if (thumbnails()[st.id]; as src) {
                     <img [src]="src" alt="" [width]="thumbSize" [height]="thumbSize" />
                   } @else {
@@ -311,7 +601,9 @@
           } @else {
             <div class="ff-nomatch" role="status">
               <p>{{ noMatchText() }}</p>
-              <button type="button" class="ff-ghost" (click)="clearFilters()">{{ t().clearSearch }}</button>
+              <button type="button" class="ff-ghost" (click)="clearFilters()">
+                {{ t().clearSearch }}
+              </button>
             </div>
           }
         }

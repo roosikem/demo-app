@@ -1,5 +1,14 @@
 import {
-  ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, model, signal, untracked,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  model,
+  signal,
+  untracked,
 } from '@angular/core';
 import { Hsv, hexToHsv, hsvToHex, normalizeHex } from './color-utils';
 
@@ -63,7 +72,7 @@ export class ColorPickerComponent {
   }
 
   protected toggle(): void {
-    this.open.update(o => !o);
+    this.open.update((o) => !o);
   }
 
   close(restoreFocus = false): void {

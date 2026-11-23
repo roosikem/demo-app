@@ -1,8 +1,19 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 export type FfIconName =
-  | 'zoom-in' | 'zoom-out' | 'rotate-left' | 'rotate-right' | 'reset' | 'download' | 'show' | 'chevron' | 'check'
-  | 'move' | 'warn' | 'user' | 'plus';
+  | 'zoom-in'
+  | 'zoom-out'
+  | 'rotate-left'
+  | 'rotate-right'
+  | 'reset'
+  | 'download'
+  | 'show'
+  | 'chevron'
+  | 'check'
+  | 'move'
+  | 'warn'
+  | 'user'
+  | 'plus';
 
 @Component({
   selector: 'app-ff-icon',

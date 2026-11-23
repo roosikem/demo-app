@@ -1,13 +1,41 @@
 import { FrameConfig, Stencil } from '../models/frame.model';
-import { BG, BLUE, BROWN, CORAL, DEEP_MINT, DEEP_SEA, FOREST, GREEN, GREEN_DARK, INK, LIME, MINT, NAVY, ORANGE, PINK, PURPLE, SKY, SLATE, TEAL, VIOLET, WHITE, YELLOW } from './colors';
+import {
+  BG,
+  BLUE,
+  BROWN,
+  CORAL,
+  DEEP_MINT,
+  DEEP_SEA,
+  FOREST,
+  GREEN,
+  GREEN_DARK,
+  INK,
+  LIME,
+  MINT,
+  NAVY,
+  ORANGE,
+  PINK,
+  PURPLE,
+  SKY,
+  SLATE,
+  TEAL,
+  VIOLET,
+  WHITE,
+  YELLOW,
+} from './colors';
+import { deepFreeze } from '../models/freeze';
 
 // Additional stencils, grouped by category
 
-function frame(partial: Omit<FrameConfig, 'photoBackground' | 'photoClip'> & { photoClip?: FrameConfig['photoClip'] }): FrameConfig {
+function frame(
+  partial: Omit<FrameConfig, 'photoBackground' | 'photoClip'> & {
+    photoClip?: FrameConfig['photoClip'];
+  },
+): FrameConfig {
   return { photoClip: 'inner', photoBackground: BG, ...partial };
 }
 
-export const STENCIL_LIBRARY: readonly Stencil[] = [
+export const STENCIL_LIBRARY: readonly Stencil[] = deepFreeze([
   // Classic
   {
     id: 'navy-line',
@@ -15,7 +43,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Classic',
     tags: ['hello', 'welcome'],
     config: frame({
-      ring: { fill: { type: 'solid', color: NAVY }, width: 0.18, innerLine: { color: WHITE, width: 0.02 } },
+      ring: {
+        fill: { type: 'solid', color: NAVY },
+        width: 0.18,
+        innerLine: { color: WHITE, width: 0.02 },
+      },
       texts: [
         { text: 'Hello', color: WHITE, center: 0, direction: 'cw', maxSpan: 90 },
         { text: 'Nice to meet you', color: WHITE, center: 180, direction: 'ccw', maxSpan: 150 },
@@ -30,8 +62,24 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: '#2b2f36' }, width: 0.2 },
       texts: [
-        { text: 'Classic', color: WHITE, center: 0, direction: 'cw', maxSpan: 100, fontFamily: 'Georgia, serif', fontWeight: 700 },
-        { text: 'Since day one', color: WHITE, center: 180, direction: 'ccw', maxSpan: 140, fontFamily: 'Georgia, serif', fontWeight: 700 },
+        {
+          text: 'Classic',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 100,
+          fontFamily: 'Georgia, serif',
+          fontWeight: 700,
+        },
+        {
+          text: 'Since day one',
+          color: WHITE,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 140,
+          fontFamily: 'Georgia, serif',
+          fontWeight: 700,
+        },
       ],
       decorations: [
         { symbol: '•', angle: 90, color: WHITE },
@@ -46,7 +94,16 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['hello'],
     config: frame({
       ring: { fill: { type: 'solid', color: TEAL }, width: 0.16 },
-      texts: [{ text: 'Say hello', color: WHITE, center: 0, direction: 'cw', maxSpan: 110, fontWeight: 800 }],
+      texts: [
+        {
+          text: 'Say hello',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 110,
+          fontWeight: 800,
+        },
+      ],
       decorations: [
         { symbol: '◇', angle: 150, color: WHITE },
         { symbol: '◇', angle: 180, color: WHITE },
@@ -60,7 +117,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Classic',
     tags: ['welcome', 'red'],
     config: frame({
-      ring: { fill: { type: 'solid', color: '#8f1d2c' }, width: 0.2, innerLine: { color: YELLOW, width: 0.015 } },
+      ring: {
+        fill: { type: 'solid', color: '#8f1d2c' },
+        width: 0.2,
+        innerLine: { color: YELLOW, width: 0.015 },
+      },
       texts: [
         { text: 'Welcome aboard', color: WHITE, center: 0, direction: 'cw', maxSpan: 150 },
         { text: 'Glad you are here', color: WHITE, center: 180, direction: 'ccw', maxSpan: 150 },
@@ -74,7 +135,17 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['member', 'purple', 'star'],
     config: frame({
       ring: { fill: { type: 'gradient', colors: [PURPLE, VIOLET, PURPLE] }, width: 0.18 },
-      texts: [{ text: 'Member', color: WHITE, center: 0, direction: 'cw', maxSpan: 90, fontWeight: 800, letterSpacing: 0.12 }],
+      texts: [
+        {
+          text: 'Member',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 90,
+          fontWeight: 800,
+          letterSpacing: 0.12,
+        },
+      ],
       decorations: [
         { symbol: '★', angle: 90, color: YELLOW },
         { symbol: '★', angle: 180, color: YELLOW },
@@ -88,7 +159,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Classic',
     tags: ['grey', 'no text'],
     config: frame({
-      ring: { fill: { type: 'solid', color: SLATE }, width: 0.12, innerLine: { color: WHITE, width: 0.015 } },
+      ring: {
+        fill: { type: 'solid', color: SLATE },
+        width: 0.12,
+        innerLine: { color: WHITE, width: 0.015 },
+      },
       texts: [],
       decorations: [
         { symbol: '◇', angle: 0, color: WHITE },
@@ -104,7 +179,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Classic',
     tags: ['light', 'hello'],
     config: frame({
-      ring: { fill: { type: 'solid', color: '#f4efe6' }, width: 0.16, innerLine: { color: '#d8cfc0', width: 0.012 } },
+      ring: {
+        fill: { type: 'solid', color: '#f4efe6' },
+        width: 0.16,
+        innerLine: { color: '#d8cfc0', width: 0.012 },
+      },
       texts: [
         { text: 'Hello there', color: INK, center: 0, direction: 'cw', maxSpan: 120 },
         { text: 'Pleased to meet you', color: INK, center: 180, direction: 'ccw', maxSpan: 150 },
@@ -119,8 +198,23 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Celebration',
     tags: ['party', 'colourful'],
     config: frame({
-      ring: { fill: { type: 'segments', colors: [CORAL, YELLOW, GREEN, BLUE, VIOLET, CORAL, YELLOW, GREEN, BLUE, VIOLET] }, width: 0.18 },
-      texts: [{ text: 'Hooray!', color: INK, center: 180, direction: 'ccw', maxSpan: 90, fontWeight: 800 }],
+      ring: {
+        fill: {
+          type: 'segments',
+          colors: [CORAL, YELLOW, GREEN, BLUE, VIOLET, CORAL, YELLOW, GREEN, BLUE, VIOLET],
+        },
+        width: 0.18,
+      },
+      texts: [
+        {
+          text: 'Hooray!',
+          color: INK,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 90,
+          fontWeight: 800,
+        },
+      ],
       decorations: [
         { symbol: '★', angle: 0, color: WHITE },
         { symbol: '×', angle: 45, color: WHITE },
@@ -135,7 +229,16 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['birthday', 'pink', 'hearts'],
     config: frame({
       ring: { fill: { type: 'solid', color: PINK }, width: 0.18 },
-      texts: [{ text: 'Happy birthday', color: WHITE, center: 0, direction: 'cw', maxSpan: 150, fontWeight: 800 }],
+      texts: [
+        {
+          text: 'Happy birthday',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 150,
+          fontWeight: 800,
+        },
+      ],
       decorations: [
         { symbol: '♥', angle: 150, color: WHITE },
         { symbol: '♥', angle: 180, color: WHITE },
@@ -149,8 +252,21 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Celebration',
     tags: ['anniversary', 'years', 'arc'],
     config: frame({
-      ring: { fill: { type: 'gradient', colors: [YELLOW, ORANGE, CORAL] }, width: 0.16, arc: { start: 200, end: 470 } },
-      texts: [{ text: '5 years', color: BROWN, center: 285, direction: 'cw', maxSpan: 70, fontWeight: 800 }],
+      ring: {
+        fill: { type: 'gradient', colors: [YELLOW, ORANGE, CORAL] },
+        width: 0.16,
+        arc: { start: 200, end: 470 },
+      },
+      texts: [
+        {
+          text: '5 years',
+          color: BROWN,
+          center: 285,
+          direction: 'cw',
+          maxSpan: 70,
+          fontWeight: 800,
+        },
+      ],
       photoClip: 'outer',
     }),
   },
@@ -179,7 +295,14 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: VIOLET }, width: 0.07 },
       texts: [],
-      badge: { shape: 'bubble', color: VIOLET, textColor: WHITE, lines: ['Party', 'time'], angle: 135, icon: 'star' },
+      badge: {
+        shape: 'bubble',
+        color: VIOLET,
+        textColor: WHITE,
+        lines: ['Party', 'time'],
+        angle: 135,
+        icon: 'star',
+      },
     }),
   },
   {
@@ -189,7 +312,16 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['thanks', 'heart'],
     config: frame({
       ring: { fill: { type: 'gradient', colors: [CORAL, PINK, VIOLET, CORAL] }, width: 0.18 },
-      texts: [{ text: 'Thank you!', color: WHITE, center: 180, direction: 'ccw', maxSpan: 110, fontWeight: 800 }],
+      texts: [
+        {
+          text: 'Thank you!',
+          color: WHITE,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 110,
+          fontWeight: 800,
+        },
+      ],
       decorations: [{ symbol: '♥', angle: 0, color: WHITE }],
     }),
   },
@@ -199,8 +331,20 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Celebration',
     tags: ['green', 'praise'],
     config: frame({
-      ring: { fill: { type: 'segments', colors: [GREEN, LIME, GREEN, LIME, GREEN, LIME, GREEN, LIME] }, width: 0.18 },
-      texts: [{ text: 'Well done', color: FOREST, center: 0, direction: 'cw', maxSpan: 110, fontWeight: 800 }],
+      ring: {
+        fill: { type: 'segments', colors: [GREEN, LIME, GREEN, LIME, GREEN, LIME, GREEN, LIME] },
+        width: 0.18,
+      },
+      texts: [
+        {
+          text: 'Well done',
+          color: FOREST,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 110,
+          fontWeight: 800,
+        },
+      ],
       decorations: [{ symbol: '★', angle: 180, color: FOREST }],
     }),
   },
@@ -213,7 +357,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
       ring: null,
       texts: [],
       badge: {
-        shape: 'diagonal', color: '#0d0d1a', textColor: '#f4f4f4', title: 'WIN', titleColors: [YELLOW, CORAL, GREEN],
+        shape: 'diagonal',
+        color: '#0d0d1a',
+        textColor: '#f4f4f4',
+        title: 'WIN',
+        titleColors: [YELLOW, CORAL, GREEN],
         lines: ['Challenge', 'complete'],
       },
       photoClip: 'outer',
@@ -229,7 +377,14 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: NAVY }, width: 0.07 },
       texts: [],
-      badge: { shape: 'bubble', color: NAVY, textColor: WHITE, lines: ['Team', 'lead'], angle: 135, icon: 'star' },
+      badge: {
+        shape: 'bubble',
+        color: NAVY,
+        textColor: WHITE,
+        lines: ['Team', 'lead'],
+        angle: 135,
+        icon: 'star',
+      },
     }),
   },
   {
@@ -240,8 +395,22 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: BLUE }, width: 0.18 },
       texts: [
-        { text: 'New here', color: WHITE, center: 0, direction: 'cw', maxSpan: 110, fontWeight: 800 },
-        { text: 'Say hi!', color: WHITE, center: 180, direction: 'ccw', maxSpan: 90, fontWeight: 800 },
+        {
+          text: 'New here',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 110,
+          fontWeight: 800,
+        },
+        {
+          text: 'Say hi!',
+          color: WHITE,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 90,
+          fontWeight: 800,
+        },
       ],
       decorations: [
         { symbol: '»', angle: 90, color: WHITE },
@@ -257,7 +426,14 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: GREEN_DARK }, width: 0.07 },
       texts: [],
-      badge: { shape: 'bubble', color: GREEN_DARK, textColor: WHITE, lines: ['Volunteer'], angle: 225, icon: 'heart' },
+      badge: {
+        shape: 'bubble',
+        color: GREEN_DARK,
+        textColor: WHITE,
+        lines: ['Volunteer'],
+        angle: 225,
+        icon: 'heart',
+      },
     }),
   },
   {
@@ -267,7 +443,16 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['buddy', 'onboarding'],
     config: frame({
       ring: { fill: { type: 'gradient', colors: [TEAL, SKY, TEAL] }, width: 0.15 },
-      texts: [{ text: 'Your buddy', color: WHITE, center: 0, direction: 'cw', maxSpan: 120, fontWeight: 800 }],
+      texts: [
+        {
+          text: 'Your buddy',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 120,
+          fontWeight: 800,
+        },
+      ],
       decorations: [{ symbol: '♥', angle: 180, color: WHITE }],
     }),
   },
@@ -277,7 +462,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Team & Roles',
     tags: ['event', 'organiser'],
     config: frame({
-      ring: { fill: { type: 'solid', color: PURPLE }, width: 0.18, innerLine: { color: WHITE, width: 0.02 } },
+      ring: {
+        fill: { type: 'solid', color: PURPLE },
+        width: 0.18,
+        innerLine: { color: WHITE, width: 0.02 },
+      },
       texts: [
         { text: 'Organiser', color: WHITE, center: 0, direction: 'cw', maxSpan: 110 },
         { text: 'Ask me anything', color: WHITE, center: 180, direction: 'ccw', maxSpan: 150 },
@@ -292,7 +481,14 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: null,
       texts: [],
-      badge: { shape: 'diagonal', color: INK, textColor: '#f4f4f4', title: 'MIC', titleColors: [YELLOW], lines: ['Speaker', 'today'] },
+      badge: {
+        shape: 'diagonal',
+        color: INK,
+        textColor: '#f4f4f4',
+        title: 'MIC',
+        titleColors: [YELLOW],
+        lines: ['Speaker', 'today'],
+      },
       photoClip: 'outer',
     }),
   },
@@ -304,8 +500,22 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: TEAL }, width: 0.18 },
       texts: [
-        { text: "We're hiring", color: WHITE, center: 0, direction: 'cw', maxSpan: 130, fontWeight: 800 },
-        { text: 'Join us', color: WHITE, center: 180, direction: 'ccw', maxSpan: 90, fontWeight: 800 },
+        {
+          text: "We're hiring",
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 130,
+          fontWeight: 800,
+        },
+        {
+          text: 'Join us',
+          color: WHITE,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 90,
+          fontWeight: 800,
+        },
       ],
       decorations: [
         { symbol: '»', angle: 90, color: WHITE },
@@ -323,7 +533,14 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: BLUE }, width: 0.07 },
       texts: [],
-      badge: { shape: 'bubble', color: BLUE, textColor: WHITE, lines: ['Always', 'learning'], angle: 225, icon: 'cloud' },
+      badge: {
+        shape: 'bubble',
+        color: BLUE,
+        textColor: WHITE,
+        lines: ['Always', 'learning'],
+        angle: 225,
+        icon: 'cloud',
+      },
     }),
   },
   {
@@ -333,8 +550,25 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['coach', 'badge'],
     config: frame({
       ring: { fill: { type: 'gradient', colors: ['#f2b705', ORANGE, '#f2b705'] }, width: 0.16 },
-      texts: [{ text: 'Coach', color: BROWN, center: 0, direction: 'cw', maxSpan: 70, fontWeight: 800, letterSpacing: 0.1 }],
-      badge: { shape: 'bubble', color: NAVY, textColor: WHITE, lines: ['Book', 'me'], angle: 135, icon: 'check' },
+      texts: [
+        {
+          text: 'Coach',
+          color: BROWN,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 70,
+          fontWeight: 800,
+          letterSpacing: 0.1,
+        },
+      ],
+      badge: {
+        shape: 'bubble',
+        color: NAVY,
+        textColor: WHITE,
+        lines: ['Book', 'me'],
+        angle: 135,
+        icon: 'check',
+      },
     }),
   },
   {
@@ -343,9 +577,20 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Skills & Learning',
     tags: ['graduate', 'black', 'gold'],
     config: frame({
-      ring: { fill: { type: 'solid', color: INK }, width: 0.18, innerLine: { color: YELLOW, width: 0.015 } },
+      ring: {
+        fill: { type: 'solid', color: INK },
+        width: 0.18,
+        innerLine: { color: YELLOW, width: 0.015 },
+      },
       texts: [
-        { text: 'Graduate', color: WHITE, center: 0, direction: 'cw', maxSpan: 110, fontWeight: 800 },
+        {
+          text: 'Graduate',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 110,
+          fontWeight: 800,
+        },
         { text: 'Keep growing', color: WHITE, center: 180, direction: 'ccw', maxSpan: 130 },
       ],
       decorations: [
@@ -363,7 +608,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
       ring: null,
       texts: [],
       badge: {
-        shape: 'diagonal', color: '#0d0d1a', textColor: '#f4f4f4', title: 'PRO', titleColors: [SKY, MINT],
+        shape: 'diagonal',
+        color: '#0d0d1a',
+        textColor: '#f4f4f4',
+        title: 'PRO',
+        titleColors: [SKY, MINT],
         lines: ['Subject', 'expert'],
       },
       photoClip: 'outer',
@@ -375,8 +624,20 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Skills & Learning',
     tags: ['curious', 'segments'],
     config: frame({
-      ring: { fill: { type: 'segments', colors: [VIOLET, SKY, MINT, VIOLET, SKY, MINT] }, width: 0.16 },
-      texts: [{ text: 'Stay curious', color: WHITE, center: 180, direction: 'ccw', maxSpan: 120, fontWeight: 800 }],
+      ring: {
+        fill: { type: 'segments', colors: [VIOLET, SKY, MINT, VIOLET, SKY, MINT] },
+        width: 0.16,
+      },
+      texts: [
+        {
+          text: 'Stay curious',
+          color: WHITE,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 120,
+          fontWeight: 800,
+        },
+      ],
       decorations: [{ symbol: '◇', angle: 0, color: WHITE }],
     }),
   },
@@ -388,8 +649,22 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: ORANGE }, width: 0.18 },
       texts: [
-        { text: 'Workshop', color: BROWN, center: 0, direction: 'cw', maxSpan: 110, fontWeight: 800 },
-        { text: 'Hands on', color: BROWN, center: 180, direction: 'ccw', maxSpan: 100, fontWeight: 800 },
+        {
+          text: 'Workshop',
+          color: BROWN,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 110,
+          fontWeight: 800,
+        },
+        {
+          text: 'Hands on',
+          color: BROWN,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 100,
+          fontWeight: 800,
+        },
       ],
       decorations: [
         { symbol: '×', angle: 90, color: WHITE },
@@ -403,8 +678,21 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Skills & Learning',
     tags: ['reading', 'arc'],
     config: frame({
-      ring: { fill: { type: 'gradient', colors: [NAVY, BLUE] }, width: 0.16, arc: { start: 230, end: 490 } },
-      texts: [{ text: 'Book club', color: WHITE, center: 0, direction: 'cw', maxSpan: 110, fontWeight: 800 }],
+      ring: {
+        fill: { type: 'gradient', colors: [NAVY, BLUE] },
+        width: 0.16,
+        arc: { start: 230, end: 490 },
+      },
+      texts: [
+        {
+          text: 'Book club',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 110,
+          fontWeight: 800,
+        },
+      ],
       photoClip: 'outer',
     }),
   },
@@ -417,7 +705,17 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['balance', 'mint'],
     config: frame({
       ring: { fill: { type: 'gradient', colors: [MINT, LIME, MINT] }, width: 0.16 },
-      texts: [{ text: 'Balance', color: DEEP_MINT, center: 90, direction: 'cw', maxSpan: 90, fontWeight: 800, letterSpacing: 0.1 }],
+      texts: [
+        {
+          text: 'Balance',
+          color: DEEP_MINT,
+          center: 90,
+          direction: 'cw',
+          maxSpan: 90,
+          fontWeight: 800,
+          letterSpacing: 0.1,
+        },
+      ],
       decorations: [{ symbol: '•', angle: 270, color: DEEP_MINT }],
     }),
   },
@@ -429,7 +727,15 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: SKY }, width: 0.18 },
       texts: [
-        { text: 'Breathe', color: DEEP_SEA, center: 0, direction: 'cw', maxSpan: 100, fontWeight: 800, letterSpacing: 0.12 },
+        {
+          text: 'Breathe',
+          color: DEEP_SEA,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 100,
+          fontWeight: 800,
+          letterSpacing: 0.12,
+        },
         { text: 'Take a moment', color: DEEP_SEA, center: 180, direction: 'ccw', maxSpan: 140 },
       ],
       decorations: [
@@ -446,7 +752,14 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: GREEN_DARK }, width: 0.07 },
       texts: [],
-      badge: { shape: 'bubble', color: GREEN_DARK, textColor: WHITE, lines: ['Walk', 'club'], angle: 225, icon: 'none' },
+      badge: {
+        shape: 'bubble',
+        color: GREEN_DARK,
+        textColor: WHITE,
+        lines: ['Walk', 'club'],
+        angle: 225,
+        icon: 'none',
+      },
     }),
   },
   {
@@ -456,7 +769,16 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['kindness', 'hearts', 'pink'],
     config: frame({
       ring: { fill: { type: 'solid', color: PINK }, width: 0.18 },
-      texts: [{ text: 'Be kind', color: WHITE, center: 180, direction: 'ccw', maxSpan: 90, fontWeight: 800 }],
+      texts: [
+        {
+          text: 'Be kind',
+          color: WHITE,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 90,
+          fontWeight: 800,
+        },
+      ],
       decorations: [
         { symbol: '♥', angle: 300, color: WHITE },
         { symbol: '♥', angle: 0, color: WHITE },
@@ -470,7 +792,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Wellbeing',
     tags: ['focus', 'grey', 'status'],
     config: frame({
-      ring: { fill: { type: 'solid', color: SLATE }, width: 0.16, innerLine: { color: WHITE, width: 0.015 } },
+      ring: {
+        fill: { type: 'solid', color: SLATE },
+        width: 0.16,
+        innerLine: { color: WHITE, width: 0.015 },
+      },
       texts: [
         { text: 'Focus time', color: WHITE, center: 0, direction: 'cw', maxSpan: 120 },
         { text: 'Back soon', color: WHITE, center: 180, direction: 'ccw', maxSpan: 110 },
@@ -483,8 +809,34 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Wellbeing',
     tags: ['sunshine', 'yellow'],
     config: frame({
-      ring: { fill: { type: 'segments', colors: [YELLOW, '#ffd980', YELLOW, '#ffd980', YELLOW, '#ffd980', YELLOW, '#ffd980', YELLOW, '#ffd980'] }, width: 0.16 },
-      texts: [{ text: 'Good vibes', color: BROWN, center: 0, direction: 'cw', maxSpan: 120, fontWeight: 800 }],
+      ring: {
+        fill: {
+          type: 'segments',
+          colors: [
+            YELLOW,
+            '#ffd980',
+            YELLOW,
+            '#ffd980',
+            YELLOW,
+            '#ffd980',
+            YELLOW,
+            '#ffd980',
+            YELLOW,
+            '#ffd980',
+          ],
+        },
+        width: 0.16,
+      },
+      texts: [
+        {
+          text: 'Good vibes',
+          color: BROWN,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 120,
+          fontWeight: 800,
+        },
+      ],
       decorations: [{ symbol: '★', angle: 180, color: ORANGE }],
     }),
   },
@@ -494,8 +846,21 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Wellbeing',
     tags: ['outdoors', 'arc', 'green'],
     config: frame({
-      ring: { fill: { type: 'gradient', colors: [GREEN, LIME] }, width: 0.16, arc: { start: 150, end: 390 } },
-      texts: [{ text: 'Fresh air', color: FOREST, center: 270, direction: 'cw', maxSpan: 90, fontWeight: 800 }],
+      ring: {
+        fill: { type: 'gradient', colors: [GREEN, LIME] },
+        width: 0.16,
+        arc: { start: 150, end: 390 },
+      },
+      texts: [
+        {
+          text: 'Fresh air',
+          color: FOREST,
+          center: 270,
+          direction: 'cw',
+          maxSpan: 90,
+          fontWeight: 800,
+        },
+      ],
       photoClip: 'outer',
     }),
   },
@@ -507,8 +872,23 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Seasons & Events',
     tags: ['season', 'pastel'],
     config: frame({
-      ring: { fill: { type: 'segments', colors: [LIME, '#f9a8c9', '#ffd980', LIME, '#f9a8c9', '#ffd980'] }, width: 0.18 },
-      texts: [{ text: 'Hello spring', color: INK, center: 180, direction: 'ccw', maxSpan: 130, fontWeight: 800 }],
+      ring: {
+        fill: {
+          type: 'segments',
+          colors: [LIME, '#f9a8c9', '#ffd980', LIME, '#f9a8c9', '#ffd980'],
+        },
+        width: 0.18,
+      },
+      texts: [
+        {
+          text: 'Hello spring',
+          color: INK,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 130,
+          fontWeight: 800,
+        },
+      ],
       decorations: [{ symbol: '•', angle: 0, color: WHITE }],
     }),
   },
@@ -519,7 +899,17 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     tags: ['season', 'warm'],
     config: frame({
       ring: { fill: { type: 'gradient', colors: [YELLOW, ORANGE, CORAL, YELLOW] }, width: 0.18 },
-      texts: [{ text: 'Summer', color: BROWN, center: 0, direction: 'cw', maxSpan: 90, fontWeight: 800, letterSpacing: 0.12 }],
+      texts: [
+        {
+          text: 'Summer',
+          color: BROWN,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 90,
+          fontWeight: 800,
+          letterSpacing: 0.12,
+        },
+      ],
       decorations: [{ symbol: '★', angle: 180, color: WHITE }],
     }),
   },
@@ -529,8 +919,22 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Seasons & Events',
     tags: ['season', 'rust'],
     config: frame({
-      ring: { fill: { type: 'solid', color: '#a3461c' }, width: 0.18, innerLine: { color: YELLOW, width: 0.015 } },
-      texts: [{ text: 'Autumn', color: WHITE, center: 0, direction: 'cw', maxSpan: 90, fontWeight: 800, letterSpacing: 0.12 }],
+      ring: {
+        fill: { type: 'solid', color: '#a3461c' },
+        width: 0.18,
+        innerLine: { color: YELLOW, width: 0.015 },
+      },
+      texts: [
+        {
+          text: 'Autumn',
+          color: WHITE,
+          center: 0,
+          direction: 'cw',
+          maxSpan: 90,
+          fontWeight: 800,
+          letterSpacing: 0.12,
+        },
+      ],
       decorations: [
         { symbol: '◇', angle: 150, color: YELLOW },
         { symbol: '◇', angle: 180, color: YELLOW },
@@ -544,8 +948,22 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Seasons & Events',
     tags: ['season', 'snow'],
     config: frame({
-      ring: { fill: { type: 'solid', color: NAVY }, width: 0.18, innerLine: { color: SKY, width: 0.015 } },
-      texts: [{ text: 'Winter', color: WHITE, center: 180, direction: 'ccw', maxSpan: 90, fontWeight: 800, letterSpacing: 0.12 }],
+      ring: {
+        fill: { type: 'solid', color: NAVY },
+        width: 0.18,
+        innerLine: { color: SKY, width: 0.015 },
+      },
+      texts: [
+        {
+          text: 'Winter',
+          color: WHITE,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 90,
+          fontWeight: 800,
+          letterSpacing: 0.12,
+        },
+      ],
       decorations: [
         { symbol: '×', angle: 320, color: WHITE },
         { symbol: '×', angle: 0, color: WHITE },
@@ -561,7 +979,14 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: { fill: { type: 'solid', color: INK }, width: 0.07 },
       texts: [],
-      badge: { shape: 'bubble', color: INK, textColor: YELLOW, lines: ['New', 'year'], angle: 45, icon: 'star' },
+      badge: {
+        shape: 'bubble',
+        color: INK,
+        textColor: YELLOW,
+        lines: ['New', 'year'],
+        angle: 45,
+        icon: 'star',
+      },
     }),
   },
   {
@@ -572,7 +997,14 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     config: frame({
       ring: null,
       texts: [],
-      badge: { shape: 'diagonal', color: NAVY, textColor: WHITE, title: 'LIVE', titleColors: [CORAL], lines: ['Conference', 'attendee'] },
+      badge: {
+        shape: 'diagonal',
+        color: NAVY,
+        textColor: WHITE,
+        title: 'LIVE',
+        titleColors: [CORAL],
+        lines: ['Conference', 'attendee'],
+      },
       photoClip: 'outer',
     }),
   },
@@ -582,8 +1014,21 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Seasons & Events',
     tags: ['event', 'arc', 'tech'],
     config: frame({
-      ring: { fill: { type: 'gradient', colors: [VIOLET, SKY, MINT] }, width: 0.16, arc: { start: 60, end: 300 } },
-      texts: [{ text: 'Hack night', color: WHITE, center: 180, direction: 'ccw', maxSpan: 110, fontWeight: 800 }],
+      ring: {
+        fill: { type: 'gradient', colors: [VIOLET, SKY, MINT] },
+        width: 0.16,
+        arc: { start: 60, end: 300 },
+      },
+      texts: [
+        {
+          text: 'Hack night',
+          color: WHITE,
+          center: 180,
+          direction: 'ccw',
+          maxSpan: 110,
+          fontWeight: 800,
+        },
+      ],
       photoClip: 'outer',
     }),
   },
@@ -621,7 +1066,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Minimal',
     tags: ['thin', 'gold'],
     config: frame({
-      ring: { fill: { type: 'solid', color: '#c9a227' }, width: 0.05, innerLine: { color: WHITE, width: 0.01 } },
+      ring: {
+        fill: { type: 'solid', color: '#c9a227' },
+        width: 0.05,
+        innerLine: { color: WHITE, width: 0.01 },
+      },
       texts: [],
     }),
   },
@@ -631,7 +1080,11 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
     category: 'Minimal',
     tags: ['black', 'double line'],
     config: frame({
-      ring: { fill: { type: 'solid', color: INK }, width: 0.08, innerLine: { color: WHITE, width: 0.02 } },
+      ring: {
+        fill: { type: 'solid', color: INK },
+        width: 0.08,
+        innerLine: { color: WHITE, width: 0.02 },
+      },
       texts: [],
     }),
   },
@@ -666,4 +1119,4 @@ export const STENCIL_LIBRARY: readonly Stencil[] = [
       texts: [],
     }),
   },
-];
+]);

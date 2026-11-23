@@ -1,3 +1,5 @@
+import { deepFreeze } from './freeze';
+
 // Sizes are fractions of the outer radius, angles are degrees (0 = top, clockwise).
 
 export type RingFill =
@@ -37,7 +39,14 @@ export interface BubbleBadge {
   readonly lines: readonly string[];
   readonly angle: number;
   readonly icon?: BadgeIcon;
+  /**
+   * floating: separate circle with a gap; joined: touches the ring with rounded joins; flush: touches the outer
+   * edge without joins. Default: joined when the badge has the ring colour, otherwise floating.
+   */
+  readonly style?: BubbleStyle;
 }
+
+export type BubbleStyle = 'floating' | 'joined' | 'flush';
 
 export interface DiagonalBadge {
   readonly shape: 'diagonal';
@@ -61,9 +70,14 @@ export interface FrameConfig {
   readonly texts: readonly ArcText[];
   readonly badge?: Badge;
   readonly decorations?: readonly Decoration[];
-  /** 'outer' fills the whole circle, used with partial rings. */
+  /** 'outer' fills the whole circle, used with partial rings and image stencils. */
   readonly photoClip: 'inner' | 'outer';
   readonly photoBackground: string;
+  /**
+   * URL of a square stencil image with a transparent centre (PNG/SVG/WebP), drawn over the photo.
+   * Must be same-origin or served with CORS headers, otherwise the framed photo cannot be exported.
+   */
+  readonly image?: string;
 }
 
 export interface PhotoTransform {
@@ -75,7 +89,12 @@ export interface PhotoTransform {
   readonly offsetY: number;
 }
 
-export const DEFAULT_PHOTO: PhotoTransform = { zoom: 1, rotation: 0, offsetX: 0, offsetY: 0 };
+export const DEFAULT_PHOTO: PhotoTransform = deepFreeze({
+  zoom: 1,
+  rotation: 0,
+  offsetX: 0,
+  offsetY: 0,
+});
 
 export interface Stencil {
   readonly id: string;

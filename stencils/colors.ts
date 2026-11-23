@@ -1,3 +1,5 @@
+import { deepFreeze } from '../models/freeze';
+
 // TODO: map to the brand colours
 export const WHITE = '#ffffff';
 export const INK = '#1b1b1b';
@@ -34,7 +36,7 @@ export const DEEP_SEA = '#062a3a';
 export const DEEP_MINT = '#063b33';
 
 /** Accessible names of the swatch colours. */
-export const COLOR_NAMES: Readonly<Record<string, string>> = {
+export const COLOR_NAMES: Readonly<Record<string, string>> = deepFreeze({
   [NAVY]: 'Navy',
   [TEAL]: 'Teal',
   [PURPLE]: 'Purple',
@@ -43,4 +45,4 @@ export const COLOR_NAMES: Readonly<Record<string, string>> = {
   [INK]: 'Black',
   [WHITE]: 'White',
   [LIGHT_YELLOW]: 'Yellow',
-};
+});

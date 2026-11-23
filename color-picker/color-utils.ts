@@ -15,7 +15,7 @@ export function normalizeHex(value: string): string | null {
   if (!m) {
     return null;
   }
-  const hex = m[1].length === 3 ? Array.from(m[1], c => c + c).join('') : m[1];
+  const hex = m[1].length === 3 ? Array.from(m[1], (c) => c + c).join('') : m[1];
   return `#${hex.toLowerCase()}`;
 }
 
@@ -46,7 +46,14 @@ export function hsvToHex({ h, s, v }: Hsv): string {
   const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
   const m = v - c;
   const sector = Math.floor(hue / 60) % 6;
-  const [r, g, b] = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][sector];
+  const [r, g, b] = [
+    [c, x, 0],
+    [x, c, 0],
+    [0, c, x],
+    [0, x, c],
+    [x, 0, c],
+    [c, 0, x],
+  ][sector];
   const toHex = (value: number): string => {
     const hex = Math.round((value + m) * 255).toString(16);
     return hex.length === 1 ? `0${hex}` : hex;

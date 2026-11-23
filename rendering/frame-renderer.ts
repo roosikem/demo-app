@@ -1,5 +1,15 @@
 import {
-  ArcText, Badge, BadgeIcon, BubbleBadge, Decoration, DiagonalBadge, ExportFormat, FrameConfig, PhotoTransform, RingLayer,
+  ArcText,
+  Badge,
+  BadgeIcon,
+  BubbleBadge,
+  BubbleStyle,
+  Decoration,
+  DiagonalBadge,
+  ExportFormat,
+  FrameConfig,
+  PhotoTransform,
+  RingLayer,
 } from '../models/frame.model';
 
 // Canvas drawing of a frame. Used for the preview, the thumbnails and the exported images.
@@ -24,7 +34,12 @@ export function geometry(size: number, config: FrameConfig): Geometry {
   const center = size / 2;
   const outer = center * EDGE;
   const inner = config.ring ? outer * (1 - config.ring.width) : outer;
-  return { center, outer, inner, photo: config.photoClip === 'outer' || !config.ring ? outer : inner };
+  return {
+    center,
+    outer,
+    inner,
+    photo: config.photoClip === 'outer' || !config.ring ? outer : inner,
+  };
 }
 
 export function renderFrame(
@@ -34,6 +49,7 @@ export function renderFrame(
   image: HTMLImageElement | null,
   photo: PhotoTransform,
   opaqueBackground?: string,
+  stencilImage: HTMLImageElement | null = null,
 ): void {
   const g = geometry(size, config);
   ctx.save();
@@ -47,11 +63,14 @@ export function renderFrame(
   if (config.ring) {
     drawRing(ctx, g, config.ring);
   }
+  if (stencilImage) {
+    ctx.drawImage(stencilImage, 0, 0, size, size);
+  }
   for (const d of config.decorations ?? []) {
     drawDecoration(ctx, g, d);
   }
   if (config.badge) {
-    drawBadge(ctx, g, config.badge, config.photoBackground);
+    drawBadge(ctx, g, config.badge, config.photoBackground, solidRingColor(config.ring));
   }
   for (const t of config.texts) {
     drawArcText(ctx, g, t);
@@ -65,6 +84,7 @@ export function renderToBlob(
   photo: PhotoTransform,
   size: number,
   format: ExportFormat,
+  stencilImage: HTMLImageElement | null = null,
   quality = 0.92,
 ): Promise<Blob> {
   const canvas = document.createElement('canvas');
@@ -74,13 +94,30 @@ export function renderToBlob(
   if (!ctx) {
     return Promise.reject(new Error('Canvas 2D is not available'));
   }
-  renderFrame(ctx, size, config, image, photo, format === 'image/jpeg' ? '#ffffff' : undefined);
+  renderFrame(
+    ctx,
+    size,
+    config,
+    image,
+    photo,
+    format === 'image/jpeg' ? '#ffffff' : undefined,
+    stencilImage,
+  );
   return new Promise((resolve, reject) =>
-    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Image export failed'))), format, quality));
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('Image export failed'))),
+      format,
+      quality,
+    ),
+  );
 }
 
 function drawPhoto(
-  ctx: CanvasRenderingContext2D, g: Geometry, config: FrameConfig, image: HTMLImageElement | null, p: PhotoTransform,
+  ctx: CanvasRenderingContext2D,
+  g: Geometry,
+  config: FrameConfig,
+  image: HTMLImageElement | null,
+  p: PhotoTransform,
 ): void {
   ctx.save();
   ctx.beginPath();
@@ -118,9 +155,10 @@ function drawRing(ctx: CanvasRenderingContext2D, g: Geometry, ring: RingLayer): 
     });
   } else {
     annulus(ctx, g, start, end);
-    ctx.fillStyle = ring.fill.type === 'solid'
-      ? ring.fill.color
-      : conic(ctx, g, ring.fill.colors, start, end) ?? ring.fill.colors[0] ?? 'transparent';
+    ctx.fillStyle =
+      ring.fill.type === 'solid'
+        ? ring.fill.color
+        : (conic(ctx, g, ring.fill.colors, start, end) ?? ring.fill.colors[0] ?? 'transparent');
     ctx.fill();
   }
   if (ring.innerLine) {
@@ -141,7 +179,11 @@ function annulus(ctx: CanvasRenderingContext2D, g: Geometry, start: number, end:
 }
 
 function conic(
-  ctx: CanvasRenderingContext2D, g: Geometry, colors: readonly string[], start: number, end: number,
+  ctx: CanvasRenderingContext2D,
+  g: Geometry,
+  colors: readonly string[],
+  start: number,
+  end: number,
 ): CanvasGradient | null {
   // older browsers without conic gradients get the first colour
   if (colors.length === 0 || typeof ctx.createConicGradient !== 'function') {
@@ -151,12 +193,19 @@ function conic(
   const span = (end - start) / TAU;
   // repeat the first colour on a full ring to avoid a seam
   const stops = span >= 1 && colors.length > 1 ? [...colors, colors[0]] : colors;
-  stops.forEach((c, i) => gradient.addColorStop(Math.min(1, (span * i) / Math.max(1, stops.length - 1)), c));
+  stops.forEach((c, i) =>
+    gradient.addColorStop(Math.min(1, (span * i) / Math.max(1, stops.length - 1)), c),
+  );
   return gradient;
 }
 
 // Largest font size <= maxFont so the text fits into maxSpan (radians). Width scales linearly with the size.
-export function fitFontSize(measure: (fontSize: number) => number, radius: number, maxSpan: number, maxFont: number): number {
+export function fitFontSize(
+  measure: (fontSize: number) => number,
+  radius: number,
+  maxSpan: number,
+  maxFont: number,
+): number {
   const width = measure(maxFont);
   if (width <= 0 || radius <= 0) {
     return maxFont;
@@ -188,7 +237,7 @@ function drawArcText(ctx: CanvasRenderingContext2D, g: Geometry, t: ArcText): vo
   ctx.fillStyle = t.color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const widths = chars.map(ch => ctx.measureText(ch).width + spacing * fontSize);
+  const widths = chars.map((ch) => ctx.measureText(ch).width + spacing * fontSize);
   const total = widths.reduce((a, b) => a + b, 0) / radius;
   const center = (t.center * Math.PI) / 180;
   const sign = t.direction === 'cw' ? 1 : -1;
@@ -224,38 +273,122 @@ function drawDecoration(ctx: CanvasRenderingContext2D, g: Geometry, d: Decoratio
   ctx.restore();
 }
 
-function drawBadge(ctx: CanvasRenderingContext2D, g: Geometry, badge: Badge, gap: string): void {
+function drawBadge(
+  ctx: CanvasRenderingContext2D,
+  g: Geometry,
+  badge: Badge,
+  gap: string,
+  ringColor: string | null,
+): void {
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(g.center, g.center, g.outer, 0, TAU);
-  ctx.clip();
   if (badge.shape === 'bubble') {
-    drawBubble(ctx, g, badge, gap);
+    drawBubble(ctx, g, badge, gap, ringColor);
   } else {
+    // the diagonal segment is cut by the circle on purpose
+    ctx.beginPath();
+    ctx.arc(g.center, g.center, g.outer, 0, TAU);
+    ctx.clip();
     drawDiagonal(ctx, g, badge);
   }
   ctx.restore();
 }
 
-function drawBubble(ctx: CanvasRenderingContext2D, g: Geometry, b: BubbleBadge, gap: string): void {
+/** Proportions per bubble style (radius relative to the frame, the rest relative to the badge). */
+const BUBBLE_LAYOUT: Record<
+  BubbleStyle,
+  {
+    radius: number;
+    gap: number;
+    textSize: number;
+    textWeight: number;
+    textOffset: number;
+    textWidth: number;
+    iconRadius: number;
+    iconOffset: number;
+    iconTurn: number;
+  }
+> = {
+  floating: {
+    radius: 0.34,
+    gap: 0.02,
+    textSize: 0.3,
+    textWeight: 700,
+    textOffset: 0.08,
+    textWidth: 1.4,
+    iconRadius: 0.32,
+    iconOffset: 0.82,
+    iconTurn: Math.PI / 2,
+  },
+  joined: {
+    radius: 0.34,
+    gap: 0,
+    textSize: 0.27,
+    textWeight: 700,
+    textOffset: 0.08,
+    textWidth: 1.4,
+    iconRadius: 0.36,
+    iconOffset: 0.95,
+    iconTurn: 1.35,
+  },
+  flush: {
+    radius: 0.3275,
+    gap: 0,
+    textSize: 0.26,
+    textWeight: 600,
+    textOffset: 0,
+    textWidth: 1.75,
+    iconRadius: 0.3,
+    iconOffset: 0.81,
+    iconTurn: 1.34,
+  },
+};
+
+function drawBubble(
+  ctx: CanvasRenderingContext2D,
+  g: Geometry,
+  b: BubbleBadge,
+  gap: string,
+  ringColor: string | null,
+): void {
+  const sameColour = ringColor?.toLowerCase() === b.color.toLowerCase() && g.inner < g.outer;
+  const style: BubbleStyle = b.style ?? (sameColour ? 'joined' : 'floating');
+  const layout = BUBBLE_LAYOUT[style];
   const a = toCanvasAngle(b.angle);
-  const r = g.outer * 0.36;
-  const distance = g.outer - r * 0.85;
+  const r = g.outer * layout.radius;
+  const gapWidth = g.outer * layout.gap;
+  // inside the frame (touching the outer edge unless floating), so the badge stays a full circle
+  const distance = g.outer - r - gapWidth;
   const x = g.center + Math.cos(a) * distance;
   const y = g.center + Math.sin(a) * distance;
-  ctx.beginPath();
-  ctx.arc(x, y, r + g.outer * 0.02, 0, TAU);
-  ctx.fillStyle = gap;
-  ctx.fill();
+  if (gapWidth > 0) {
+    ctx.beginPath();
+    ctx.arc(x, y, r + gapWidth, 0, TAU);
+    ctx.fillStyle = gap;
+    ctx.fill();
+  }
+  ctx.fillStyle = b.color;
   ctx.beginPath();
   ctx.arc(x, y, r, 0, TAU);
-  ctx.fillStyle = b.color;
   ctx.fill();
-  fillLines(ctx, b.lines, b.textColor, x, y + r * 0.08, r * 1.5, r * 0.3);
+  if (style === 'joined' && g.inner < g.outer) {
+    drawBubbleJoins(ctx, g, x, y, r);
+  }
+  fillLines(
+    ctx,
+    b.lines,
+    b.textColor,
+    x,
+    y + r * layout.textOffset,
+    r * layout.textWidth,
+    r * layout.textSize,
+    layout.textWeight,
+  );
   if (b.icon && b.icon !== 'none') {
-    const ir = r * 0.32;
-    const ix = x + Math.cos(-Math.PI / 4) * r * 0.82;
-    const iy = y + Math.sin(-Math.PI / 4) * r * 0.82;
+    const ir = r * layout.iconRadius;
+    // turned towards the ring, so the icon stays inside the frame for any badge angle
+    const ia = a - layout.iconTurn;
+    const ix = x + Math.cos(ia) * r * layout.iconOffset;
+    const iy = y + Math.sin(ia) * r * layout.iconOffset;
     ctx.beginPath();
     ctx.arc(ix, iy, ir, 0, TAU);
     ctx.fillStyle = gap;
@@ -265,6 +398,59 @@ function drawBubble(ctx: CanvasRenderingContext2D, g: Geometry, b: BubbleBadge, 
     ctx.stroke();
     drawIcon(ctx, b.icon, ix, iy, ir * 0.62, b.color);
   }
+}
+
+/**
+ * Rounded joins between an attached badge and the ring (both sides). Each join is the area between the badge,
+ * the inner edge of the ring and a small circle touching both. Uses the current fillStyle.
+ */
+function drawBubbleJoins(
+  ctx: CanvasRenderingContext2D,
+  g: Geometry,
+  bx: number,
+  by: number,
+  r: number,
+): void {
+  const c = g.center;
+  const f = g.outer * 0.1;
+  const d = Math.hypot(bx - c, by - c);
+  const toRing = g.inner - f;
+  const toBadge = r + f;
+  // circle-circle intersection: centres of the small join circles
+  const along = (toRing * toRing - toBadge * toBadge + d * d) / (2 * d);
+  const across = Math.sqrt(toRing * toRing - along * along);
+  if (!Number.isFinite(across) || d === 0) {
+    return;
+  }
+  const ux = (bx - c) / d;
+  const uy = (by - c) / d;
+  const badgeAngle = Math.atan2(uy, ux);
+  for (const side of [-1, 1]) {
+    const fx = c + ux * along - uy * across * side;
+    const fy = c + uy * along + ux * across * side;
+    const toBadgeAngle = Math.atan2(by - fy, bx - fx);
+    const ringAngle = Math.atan2(fy - c, fx - c);
+    // tangent points: towards the badge centre, and away from the frame centre (inner edge of the ring)
+    const start = toBadgeAngle;
+    const end = ringAngle;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(fx + Math.cos(start) * f, fy + Math.sin(start) * f);
+    ctx.arc(fx, fy, f, start, end, shortestTurn(start, end) < 0);
+    ctx.lineTo(c + Math.cos(ringAngle) * g.outer, c + Math.sin(ringAngle) * g.outer);
+    ctx.arc(c, c, g.outer, ringAngle, badgeAngle, shortestTurn(ringAngle, badgeAngle) < 0);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/** Signed smallest angle from a to b (-PI .. PI). */
+function shortestTurn(a: number, b: number): number {
+  return Math.atan2(Math.sin(b - a), Math.cos(b - a));
+}
+
+function solidRingColor(ring: FrameConfig['ring']): string | null {
+  return ring?.fill.type === 'solid' ? ring.fill.color : null;
 }
 
 function drawDiagonal(ctx: CanvasRenderingContext2D, g: Geometry, b: DiagonalBadge): void {
@@ -285,7 +471,7 @@ function drawDiagonal(ctx: CanvasRenderingContext2D, g: Geometry, b: DiagonalBad
   ctx.textBaseline = 'middle';
   const letters = Array.from(b.title);
   const colors = b.titleColors?.length ? b.titleColors : [b.textColor];
-  const widths = letters.map(l => ctx.measureText(l).width);
+  const widths = letters.map((l) => ctx.measureText(l).width);
   let cursor = x - widths.reduce((s, w) => s + w, 0) / 2;
   letters.forEach((l, i) => {
     ctx.fillStyle = colors[i % colors.length];
@@ -297,24 +483,38 @@ function drawDiagonal(ctx: CanvasRenderingContext2D, g: Geometry, b: DiagonalBad
 }
 
 function fillLines(
-  ctx: CanvasRenderingContext2D, lines: readonly string[], color: string, x: number, y: number, maxWidth: number, size: number,
+  ctx: CanvasRenderingContext2D,
+  lines: readonly string[],
+  color: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  size: number,
+  weight = 700,
 ): void {
-  const visible = lines.map(l => l.trim()).filter(Boolean);
+  const visible = lines.map((l) => l.trim()).filter(Boolean);
   ctx.fillStyle = color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const lineHeight = size * 1.2;
   const top = y - ((visible.length - 1) * lineHeight) / 2;
   visible.forEach((line, i) => {
-    ctx.font = `700 ${size}px ${DEFAULT_FONT}`;
+    ctx.font = `${weight} ${size}px ${DEFAULT_FONT}`;
     const w = ctx.measureText(line).width;
     const fitted = w > maxWidth ? (size * maxWidth) / w : size;
-    ctx.font = `700 ${fitted}px ${DEFAULT_FONT}`;
+    ctx.font = `${weight} ${fitted}px ${DEFAULT_FONT}`;
     ctx.fillText(line, x, top + i * lineHeight);
   });
 }
 
-function drawIcon(ctx: CanvasRenderingContext2D, icon: BadgeIcon, x: number, y: number, s: number, color: string): void {
+function drawIcon(
+  ctx: CanvasRenderingContext2D,
+  icon: BadgeIcon,
+  x: number,
+  y: number,
+  s: number,
+  color: string,
+): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.strokeStyle = color;
@@ -379,5 +579,7 @@ function luminance(hex: string): number | null {
     const s = v / 255;
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
   };
-  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+  return (
+    0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
+  );
 }

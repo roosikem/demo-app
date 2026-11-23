@@ -1,10 +1,18 @@
 import { InjectionToken, Provider } from '@angular/core';
-import { BADGE_LINE_MAX_LENGTH, CustomFrameState, DEFAULT_CUSTOM_STATE, TEXT_MAX_LENGTH, clamp } from '../rendering/custom-frame';
+import {
+  BADGE_LINE_MAX_LENGTH,
+  CustomFrameState,
+  DEFAULT_CUSTOM_STATE,
+  TEXT_MAX_LENGTH,
+  clamp,
+} from '../rendering/custom-frame';
 import { DEFAULT_LABELS, FrameLabels } from './frame-labels';
 import { BadgeIcon, ExportFormat, Stencil } from '../models/frame.model';
 import { COLOR_NAMES } from '../stencils/colors';
 import { FONTS, PALETTES, Palette, STENCILS, SWATCHES, TEXT_SWATCHES } from '../stencils/stencils';
 import { STENCIL_LIBRARY } from '../stencils/stencil-library';
+import { deepFreeze } from '../models/freeze';
+import { normalizeImageHost, sanitizeStencils } from './stencil-validation';
 
 // Merge order: DEFAULT_FACE_FRAME_OPTIONS < provideFaceFrame() < [options] input
 
@@ -54,9 +62,13 @@ export interface FaceFrameOptions {
   readonly translateStencilTexts: boolean;
   /** Accessible names of the swatch colours (hex -> name), passed through translate. */
   readonly colorNames: Readonly<Record<string, string>>;
+  /** https hosts for stencil images besides the own origin */
+  readonly imageHosts: readonly string[];
 }
 
-export type FaceFrameOptionsInput = Partial<Omit<FaceFrameOptions, 'zoom' | 'export' | 'download' | 'features'>> & {
+export type FaceFrameOptionsInput = Partial<
+  Omit<FaceFrameOptions, 'zoom' | 'export' | 'download' | 'features'>
+> & {
   readonly zoom?: Partial<FaceFrameOptions['zoom']>;
   readonly export?: Partial<FaceFrameOptions['export']>;
   readonly download?: Partial<FaceFrameOptions['download']>;
@@ -68,8 +80,8 @@ export const MAX_EXPORT_SIZE = 4096;
 const DEFAULT_FILE_NAME = 'profile-photo';
 const SAFE_FILE_NAME = /^[\w.-]{1,64}$/;
 
-export const DEFAULT_FACE_FRAME_OPTIONS: FaceFrameOptions = {
-  stencils: [...STENCILS, ...STENCIL_LIBRARY],
+export const DEFAULT_FACE_FRAME_OPTIONS: FaceFrameOptions = deepFreeze({
+  stencils: sanitizeStencils([...STENCILS, ...STENCIL_LIBRARY], { imageHosts: [] }),
   palettes: PALETTES,
   swatches: SWATCHES,
   textSwatches: TEXT_SWATCHES,
@@ -98,10 +110,11 @@ export const DEFAULT_FACE_FRAME_OPTIONS: FaceFrameOptions = {
     stencilCategories: true,
     stencilDropdown: true,
   },
-  translate: text => text,
+  translate: (text) => text,
   translateStencilTexts: false,
   colorNames: COLOR_NAMES,
-};
+  imageHosts: [],
+});
 
 export const FACE_FRAME_OPTIONS = new InjectionToken<FaceFrameOptionsInput>('FACE_FRAME_OPTIONS');
 
@@ -109,12 +122,23 @@ export function provideFaceFrame(options: FaceFrameOptionsInput): Provider {
   return { provide: FACE_FRAME_OPTIONS, useValue: options };
 }
 
-export function mergeFaceFrameOptions(base: FaceFrameOptions, ...inputs: (FaceFrameOptionsInput | null | undefined)[]): FaceFrameOptions {
+export function mergeFaceFrameOptions(
+  base: FaceFrameOptions,
+  ...inputs: (FaceFrameOptionsInput | null | undefined)[]
+): FaceFrameOptions {
   const merged = inputs.reduce<FaceFrameOptions>((acc, input): FaceFrameOptions => {
     if (!input) {
       return acc;
     }
-    const { zoom, export: exportOptions, download, features, labels, colorNames, ...rest } = defined(input);
+    const {
+      zoom,
+      export: exportOptions,
+      download,
+      features,
+      labels,
+      colorNames,
+      ...rest
+    } = defined(input);
     return {
       ...acc,
       ...(rest as Partial<FaceFrameOptions>),
@@ -126,19 +150,34 @@ export function mergeFaceFrameOptions(base: FaceFrameOptions, ...inputs: (FaceFr
       colorNames: { ...acc.colorNames, ...defined(colorNames) } as FaceFrameOptions['colorNames'],
     };
   }, base);
-  return {
+  const imageHosts = (Array.isArray(merged.imageHosts) ? merged.imageHosts : [])
+    .map(normalizeImageHost)
+    .filter((h): h is string => h !== null);
+  // copies, so arrays passed in by the app are not frozen
+  return deepFreeze({
     ...merged,
+    palettes: merged.palettes.map((p) => ({ ...p, colors: [...p.colors] })),
+    swatches: [...merged.swatches],
+    textSwatches: [...merged.textSwatches],
+    fonts: [...merged.fonts],
+    badgeIcons: [...merged.badgeIcons],
+    defaultCustom: { ...merged.defaultCustom },
+    imageHosts,
+    stencils: sanitizeStencils(merged.stencils, { imageHosts }),
     export: { ...merged.export, size: clamp(merged.export.size, MIN_EXPORT_SIZE, MAX_EXPORT_SIZE) },
     download: {
       ...merged.download,
+      formats: [...merged.download.formats],
       size: clamp(merged.download.size, MIN_EXPORT_SIZE, MAX_EXPORT_SIZE),
-      fileName: SAFE_FILE_NAME.test(merged.download.fileName) ? merged.download.fileName : DEFAULT_FILE_NAME,
+      fileName: SAFE_FILE_NAME.test(merged.download.fileName)
+        ? merged.download.fileName
+        : DEFAULT_FILE_NAME,
     },
-  };
+  });
 }
 
 export interface FaceFrameError {
-  readonly key: 'LOAD_FAILED' | 'EXPORT_FAILED' | 'DOWNLOAD_FAILED';
+  readonly key: 'LOAD_FAILED' | 'EXPORT_FAILED' | 'DOWNLOAD_FAILED' | 'STENCIL_LOAD_FAILED';
   readonly cause: unknown;
 }
 

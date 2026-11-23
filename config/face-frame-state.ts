@@ -28,7 +28,10 @@ export function initialFaceFrameState(o: FaceFrameOptions): FaceFrameState {
  * Makes a state from outside (e.g. restored from storage) safe to use: unknown values fall back to the
  * defaults, colours must be hex, numbers are clamped and texts are cut to the allowed length.
  */
-export function sanitizeFaceFrameState(input: Partial<FaceFrameState> | null | undefined, o: FaceFrameOptions): FaceFrameState {
+export function sanitizeFaceFrameState(
+  input: Partial<FaceFrameState> | null | undefined,
+  o: FaceFrameOptions,
+): FaceFrameState {
   const defaults = initialFaceFrameState(o);
   if (!input || typeof input !== 'object') {
     return defaults;
@@ -36,13 +39,20 @@ export function sanitizeFaceFrameState(input: Partial<FaceFrameState> | null | u
   return {
     tab: input.tab === 'custom' || input.tab === 'stencils' ? input.tab : defaults.tab,
     custom: sanitizeCustom(input.custom, o),
-    stencilId: oneOf(input.stencilId, o.stencils.map(s => s.id), defaults.stencilId),
+    stencilId: oneOf(
+      input.stencilId,
+      o.stencils.map((s) => s.id),
+      defaults.stencilId,
+    ),
     photo: sanitizePhoto(input.photo, o),
     downloadFormat: oneOf(input.downloadFormat, o.download.formats, defaults.downloadFormat),
   };
 }
 
-export function sanitizePhoto(p: Partial<PhotoTransform> | null | undefined, o: FaceFrameOptions): PhotoTransform {
+export function sanitizePhoto(
+  p: Partial<PhotoTransform> | null | undefined,
+  o: FaceFrameOptions,
+): PhotoTransform {
   const rotation = Number(p?.rotation ?? 0);
   return {
     zoom: clamp(Number(p?.zoom ?? DEFAULT_PHOTO.zoom), o.zoom.min, o.zoom.max),
@@ -52,7 +62,10 @@ export function sanitizePhoto(p: Partial<PhotoTransform> | null | undefined, o: 
   };
 }
 
-function sanitizeCustom(c: Partial<CustomFrameState> | null | undefined, o: FaceFrameOptions): CustomFrameState {
+function sanitizeCustom(
+  c: Partial<CustomFrameState> | null | undefined,
+  o: FaceFrameOptions,
+): CustomFrameState {
   const d = o.defaultCustom;
   if (!c || typeof c !== 'object') {
     return d;
@@ -64,7 +77,11 @@ function sanitizeCustom(c: Partial<CustomFrameState> | null | undefined, o: Face
   return {
     ringStyle: oneOf(c.ringStyle, RING_STYLES, d.ringStyle),
     ringColor: color(c.ringColor, d.ringColor),
-    paletteId: oneOf(c.paletteId, o.palettes.map(p => p.id), d.paletteId),
+    paletteId: oneOf(
+      c.paletteId,
+      o.palettes.map((p) => p.id),
+      d.paletteId,
+    ),
     ringWidth: clamp(Number(c.ringWidth ?? d.ringWidth), RING_WIDTH.min, RING_WIDTH.max),
     innerLine: c.innerLine === true,
     fontFamily: oneOf(c.fontFamily, o.fonts, d.fontFamily),

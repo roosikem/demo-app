@@ -1,3 +1,5 @@
+import { deepFreeze } from '../models/freeze';
+
 // Default (English) texts, override via options.labels
 export interface FrameLabels {
   readonly expandWindow: string;
@@ -78,7 +80,7 @@ export interface FrameLabels {
   readonly iconCloud: string;
 }
 
-export const DEFAULT_LABELS: FrameLabels = {
+export const DEFAULT_LABELS: FrameLabels = deepFreeze({
   expandWindow: 'Please expand this window to choose your FaceFrame.',
   photo: 'Photo',
   zoom: 'Zoom',
@@ -153,4 +155,4 @@ export const DEFAULT_LABELS: FrameLabels = {
   iconStar: 'Star',
   iconHeart: 'Heart',
   iconCloud: 'Cloud',
-};
+});

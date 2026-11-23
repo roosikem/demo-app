@@ -1,15 +1,49 @@
 import {
-  ChangeDetectionStrategy, Component, ElementRef, OnDestroy, computed, effect, inject, input, linkedSignal, model, output,
-  signal, untracked, viewChild,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  input,
+  linkedSignal,
+  model,
+  output,
+  signal,
+  untracked,
+  viewChild,
 } from '@angular/core';
-import { CustomFrameState, RING_WIDTH, buildCustomFrame, ringBackground } from '../rendering/custom-frame';
 import {
-  DEFAULT_FACE_FRAME_OPTIONS, FACE_FRAME_OPTIONS, FaceFrameError, FaceFrameOptions, FaceFrameOptionsInput, mergeFaceFrameOptions,
+  CustomFrameState,
+  RING_WIDTH,
+  buildCustomFrame,
+  ringBackground,
+} from '../rendering/custom-frame';
+import {
+  DEFAULT_FACE_FRAME_OPTIONS,
+  FACE_FRAME_OPTIONS,
+  FaceFrameError,
+  FaceFrameOptions,
+  FaceFrameOptionsInput,
+  mergeFaceFrameOptions,
 } from '../config/face-frame-options';
-import { FaceFrameState, initialFaceFrameState, sanitizeFaceFrameState, sanitizePhoto } from '../config/face-frame-state';
+import {
+  FaceFrameState,
+  initialFaceFrameState,
+  sanitizeFaceFrameState,
+  sanitizePhoto,
+} from '../config/face-frame-state';
 import { DEFAULT_LABELS, FrameLabels } from '../config/frame-labels';
 import { contrastRatio, geometry, renderFrame, renderToBlob } from '../rendering/frame-renderer';
-import { BadgeIcon, ExportFormat, FrameConfig, PhotoTransform, Stencil } from '../models/frame.model';
+import { loadStencilImage } from '../rendering/stencil-images';
+import {
+  BadgeIcon,
+  ExportFormat,
+  FrameConfig,
+  PhotoTransform,
+  Stencil,
+} from '../models/frame.model';
 import { Palette } from '../stencils/stencils';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { FfIconComponent } from '../icon/ff-icon.component';
@@ -18,6 +52,7 @@ type Tab = FaceFrameState['tab'];
 
 const THUMB_SIZE = 72;
 const THUMB_BATCH = 8;
+const SEARCH_MAX_LENGTH = 64;
 const ZOOM_STEP_BUTTON = 1.1;
 const ZOOM_STEP_WHEEL = 1.06;
 const ZOOM_STEP_KEY = 1.05;
@@ -29,7 +64,11 @@ let nextId = 0;
   selector: 'app-face-frame-editor',
   imports: [ColorPickerComponent, FfIconComponent],
   templateUrl: './face-frame-editor.component.html',
-  styleUrls: ['./face-frame-editor.component.scss', './face-frame-controls.scss', './face-frame-gallery.scss'],
+  styleUrls: [
+    './face-frame-editor.component.scss',
+    './face-frame-controls.scss',
+    './face-frame-gallery.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(window:resize)': 'onResize()' },
 })
@@ -49,8 +88,12 @@ export class FaceFrameEditorComponent implements OnDestroy {
 
   private readonly appOptions = inject(FACE_FRAME_OPTIONS, { optional: true });
   protected readonly opts = computed<FaceFrameOptions>(() =>
-    mergeFaceFrameOptions(DEFAULT_FACE_FRAME_OPTIONS, this.appOptions, this.options()));
-  protected readonly t = computed<FrameLabels>(() => ({ ...DEFAULT_LABELS, ...this.opts().labels }));
+    mergeFaceFrameOptions(DEFAULT_FACE_FRAME_OPTIONS, this.appOptions, this.options()),
+  );
+  protected readonly t = computed<FrameLabels>(() => ({
+    ...DEFAULT_LABELS,
+    ...this.opts().labels,
+  }));
   protected readonly features = computed(() => this.opts().features);
   protected readonly colorNames = computed(() => {
     const { colorNames, translate } = this.opts();
@@ -60,16 +103,25 @@ export class FaceFrameEditorComponent implements OnDestroy {
     }
     return translated;
   });
-  protected readonly bothTabs = computed(() => this.features().customTab && this.features().stencilsTab);
+  protected readonly bothTabs = computed(
+    () => this.features().customTab && this.features().stencilsTab,
+  );
 
   protected readonly uid = `ff${nextId++}`;
   protected readonly thumbSize = THUMB_SIZE;
+  protected readonly searchMaxLength = SEARCH_MAX_LENGTH;
   protected readonly ringWidth = RING_WIDTH;
-  protected readonly ringStyles: readonly CustomFrameState['ringStyle'][] = ['solid', 'gradient', 'segments'];
+  protected readonly ringStyles: readonly CustomFrameState['ringStyle'][] = [
+    'solid',
+    'gradient',
+    'segments',
+  ];
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   // parent's [(state)] if set, otherwise the defaults
-  private readonly current = linkedSignal<FaceFrameState>(() => sanitizeFaceFrameState(this.state(), this.opts()));
+  private readonly current = linkedSignal<FaceFrameState>(() =>
+    sanitizeFaceFrameState(this.state(), this.opts()),
+  );
   protected readonly tab = computed<Tab>(() => {
     const { customTab, stencilsTab } = this.features();
     if (!stencilsTab) {
@@ -95,16 +147,21 @@ export class FaceFrameEditorComponent implements OnDestroy {
   readonly config = computed<FrameConfig>(() => {
     const o = this.opts();
     if (this.tab() === 'stencils') {
-      const stencil = o.stencils.find(s => s.id === this.stencilId()) ?? o.stencils[0];
+      const stencil = o.stencils.find((s) => s.id === this.stencilId()) ?? o.stencils[0];
       if (stencil) {
         return this.stencilConfig(stencil);
       }
     }
-    return buildCustomFrame(this.custom(), o.palettes, { text: o.textMaxLength, badgeLine: o.badgeLineMaxLength });
+    return buildCustomFrame(this.custom(), o.palettes, {
+      text: o.textMaxLength,
+      badgeLine: o.badgeLineMaxLength,
+    });
   });
 
   protected readonly topContrastLow = computed(() => this.contrastLow(this.custom().topColor));
-  protected readonly bottomContrastLow = computed(() => this.contrastLow(this.custom().bottomColor));
+  protected readonly bottomContrastLow = computed(() =>
+    this.contrastLow(this.custom().bottomColor),
+  );
 
   protected readonly query = signal('');
   protected readonly category = signal<string | null>(null);
@@ -121,32 +178,46 @@ export class FaceFrameEditorComponent implements OnDestroy {
     const q = this.query().trim().toLowerCase();
     const cat = this.category();
     const translate = this.opts().translate;
-    return this.opts().stencils.filter(s => (!cat || s.category === cat) && (!q || searchText(s, translate).includes(q)));
+    return this.opts().stencils.filter(
+      (s) => (!cat || s.category === cat) && (!q || searchText(s, translate).includes(q)),
+    );
   });
   // uncategorised stencils go last, without an optgroup
   protected readonly stencilGroups = computed(() => {
-    const groups = this.categories().map(c => ({ category: c, stencils: this.opts().stencils.filter(s => s.category === c) }));
-    const rest = this.opts().stencils.filter(s => !s.category);
+    const groups = this.categories().map((c) => ({
+      category: c,
+      stencils: this.opts().stencils.filter((s) => s.category === c),
+    }));
+    const rest = this.opts().stencils.filter((s) => !s.category);
     return rest.length ? [...groups, { category: '', stencils: rest }] : groups;
   });
-  protected readonly selectedStencil = computed(() => this.opts().stencils.find(s => s.id === this.stencilId()));
-  protected readonly selectedHidden = computed(() =>
-    !!this.selectedStencil() && !this.visibleStencils().some(s => s.id === this.stencilId()));
+  protected readonly selectedStencil = computed(() =>
+    this.opts().stencils.find((s) => s.id === this.stencilId()),
+  );
+  protected readonly selectedHidden = computed(
+    () =>
+      !!this.selectedStencil() && !this.visibleStencils().some((s) => s.id === this.stencilId()),
+  );
   // roving tabindex: only one card is in the tab order
   protected readonly focusableStencilId = computed(() =>
-    this.selectedHidden() ? this.visibleStencils()[0]?.id : this.stencilId());
+    this.selectedHidden() ? this.visibleStencils()[0]?.id : this.stencilId(),
+  );
   protected readonly resultText = computed(() => {
-    const count = this.t().resultCount
-      .replace('{n}', String(this.visibleStencils().length))
+    const count = this.t()
+      .resultCount.replace('{n}', String(this.visibleStencils().length))
       .replace('{total}', String(this.opts().stencils.length));
     const category = this.category();
     return category ? `${count} · ${this.tr(category)}` : count;
   });
-  protected readonly noMatchText = computed(() => this.t().noMatch.replace('{q}', this.query().trim()));
+  protected readonly noMatchText = computed(() =>
+    this.t().noMatch.replace('{q}', this.query().trim()),
+  );
 
   protected readonly thumbnails = signal<Record<string, string>>({});
   private readonly thumbCache = new Map<string, string>();
   private thumbKey = '';
+  private readonly stencilImages = signal<ReadonlyMap<string, HTMLImageElement>>(new Map());
+  private readonly requestedImages = new Set<string>();
   private thumbStencils: readonly Stencil[] | null = null;
   protected readonly smallPreview = signal('');
 
@@ -158,19 +229,19 @@ export class FaceFrameEditorComponent implements OnDestroy {
   private exportAgain = false;
 
   constructor() {
-    effect(onCleanup => {
+    effect((onCleanup) => {
       const source = this.source();
       let cancelled = false;
       onCleanup(() => (cancelled = true));
       this.load(source).then(
-        img => {
+        (img) => {
           if (!cancelled) {
             this.image.set(img);
             this.loadError.set(false);
             this.ready.emit(img !== null);
           }
         },
-        cause => {
+        (cause) => {
           if (!cancelled) {
             this.image.set(null);
             this.loadError.set(true);
@@ -195,12 +266,13 @@ export class FaceFrameEditorComponent implements OnDestroy {
         canvas.width = size;
         canvas.height = size;
       }
+      const overlay = this.stencilImageFor(config);
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        renderFrame(ctx, size, config, image, photo);
+        renderFrame(ctx, size, config, image, photo, undefined, overlay);
       }
       if (untracked(this.features).chatPreview) {
-        this.smallPreview.set(this.renderDataUrl(config, image, photo, 96));
+        this.smallPreview.set(this.renderDataUrl(config, image, photo, 96, overlay));
       }
       this.changed.emit({ config, photo });
       if (image && untracked(this.shownInPhoto)) {
@@ -217,13 +289,20 @@ export class FaceFrameEditorComponent implements OnDestroy {
       const photo = this.photo();
       const stencils = this.opts().stencils;
       const visible = this.visibleStencils();
-      const key = `${image?.src ?? ''}|${photo.zoom}|${photo.rotation}|${photo.offsetX}|${photo.offsetY}`;
+      visible.forEach((s) => s.config.image && this.requestStencilImage(s.config.image));
+      const loadedImages = this.stencilImages().size;
+      const key = `${image?.src ?? ''}|${photo.zoom}|${photo.rotation}|${photo.offsetX}|${photo.offsetY}|${loadedImages}`;
       if (key !== this.thumbKey || stencils !== this.thumbStencils) {
         this.thumbKey = key;
         this.thumbStencils = stencils;
         this.thumbCache.clear();
       }
-      this.renderThumbnails(visible.filter(s => !this.thumbCache.has(s.id)), image, photo, key);
+      this.renderThumbnails(
+        visible.filter((s) => !this.thumbCache.has(s.id)),
+        image,
+        photo,
+        key,
+      );
     });
   }
 
@@ -237,7 +316,17 @@ export class FaceFrameEditorComponent implements OnDestroy {
       throw new Error('No photo loaded');
     }
     const o = this.opts();
-    return renderToBlob(this.config(), image, this.photo(), size ?? o.export.size, format ?? o.export.format);
+    const config = this.config();
+    const photo = this.photo();
+    const overlay = config.image ? await loadStencilImage(config.image) : null;
+    return renderToBlob(
+      config,
+      image,
+      photo,
+      size ?? o.export.size,
+      format ?? o.export.format,
+      overlay,
+    );
   }
 
   reset(): void {
@@ -292,7 +381,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
   }
 
   protected setQuery(event: Event): void {
-    this.query.set(this.text(event));
+    this.query.set(this.text(event).slice(0, SEARCH_MAX_LENGTH));
   }
 
   protected clearFilters(): void {
@@ -320,11 +409,20 @@ export class FaceFrameEditorComponent implements OnDestroy {
     }
     const gallery = event.currentTarget as HTMLElement;
     const card = gallery.querySelector<HTMLElement>('.ff-stencil');
-    const columns = card ? Math.max(1, Math.round(gallery.clientWidth / (card.offsetWidth + 12))) : 1;
-    const current = Math.max(0, list.findIndex(s => s.id === this.focusableStencilId()));
+    const columns = card
+      ? Math.max(1, Math.round(gallery.clientWidth / (card.offsetWidth + 12)))
+      : 1;
+    const current = Math.max(
+      0,
+      list.findIndex((s) => s.id === this.focusableStencilId()),
+    );
     const moves: Record<string, number> = {
-      ArrowRight: current + 1, ArrowLeft: current - 1, ArrowDown: current + columns, ArrowUp: current - columns,
-      Home: 0, End: list.length - 1,
+      ArrowRight: current + 1,
+      ArrowLeft: current - 1,
+      ArrowDown: current + columns,
+      ArrowUp: current - columns,
+      Home: 0,
+      End: list.length - 1,
     };
     const next = moves[event.key];
     if (next === undefined) {
@@ -377,7 +475,13 @@ export class FaceFrameEditorComponent implements OnDestroy {
 
   protected iconLabel(icon: BadgeIcon): string {
     const t = this.t();
-    return { none: t.iconNone, check: t.iconCheck, star: t.iconStar, heart: t.iconHeart, cloud: t.iconCloud }[icon];
+    return {
+      none: t.iconNone,
+      check: t.iconCheck,
+      star: t.iconStar,
+      heart: t.iconHeart,
+      cloud: t.iconCloud,
+    }[icon];
   }
 
   protected ringStyleLabel(style: CustomFrameState['ringStyle']): string {
@@ -411,7 +515,12 @@ export class FaceFrameEditorComponent implements OnDestroy {
     }
     (event.target as HTMLElement).setPointerCapture(event.pointerId);
     this.dragging.set(true);
-    this.drag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, start: this.photo() };
+    this.drag = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      start: this.photo(),
+    };
   }
 
   protected onPointerMove(event: PointerEvent): void {
@@ -480,7 +589,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
       lines: c.badge.lines.map(translate),
       ...(c.badge.shape === 'diagonal' ? { title: translate(c.badge.title) } : {}),
     };
-    return { ...c, texts: c.texts.map(t => ({ ...t, text: translate(t.text) })), badge };
+    return { ...c, texts: c.texts.map((t) => ({ ...t, text: translate(t.text) })), badge };
   }
 
   private findById(suffix: string): HTMLElement | null {
@@ -490,17 +599,29 @@ export class FaceFrameEditorComponent implements OnDestroy {
 
   private contrastLow(textColor: string): boolean {
     const o = this.opts();
-    return o.features.contrastWarning && contrastRatio(textColor, ringBackground(this.custom(), o.palettes)) < o.minContrast;
+    return (
+      o.features.contrastWarning &&
+      contrastRatio(textColor, ringBackground(this.custom(), o.palettes)) < o.minContrast
+    );
   }
 
-  private renderThumbnails(list: readonly Stencil[], image: HTMLImageElement | null, photo: PhotoTransform, key: string): void {
+  private renderThumbnails(
+    list: readonly Stencil[],
+    image: HTMLImageElement | null,
+    photo: PhotoTransform,
+    key: string,
+  ): void {
     let index = 0;
     const step = (): void => {
       if (key !== this.thumbKey) {
         return;
       }
       for (const s of list.slice(index, index + THUMB_BATCH)) {
-        this.thumbCache.set(s.id, this.renderDataUrl(this.stencilConfig(s), image, photo, THUMB_SIZE * 2));
+        const config = this.stencilConfig(s);
+        this.thumbCache.set(
+          s.id,
+          this.renderDataUrl(config, image, photo, THUMB_SIZE * 2, this.stencilImageFor(config)),
+        );
       }
       index += THUMB_BATCH;
       this.thumbnails.set(this.thumbnailRecord());
@@ -515,8 +636,32 @@ export class FaceFrameEditorComponent implements OnDestroy {
     }
   }
 
+  // null until the image is loaded
+  private stencilImageFor(config: FrameConfig): HTMLImageElement | null {
+    if (!config.image) {
+      return null;
+    }
+    this.requestStencilImage(config.image);
+    return this.stencilImages().get(config.image) ?? null;
+  }
+
+  private requestStencilImage(url: string): void {
+    if (this.requestedImages.has(url)) {
+      return;
+    }
+    this.requestedImages.add(url);
+    loadStencilImage(url).then(
+      (img) => this.stencilImages.update((images) => new Map(images).set(url, img)),
+      (cause) => {
+        this.requestedImages.delete(url);
+        this.frameError.emit({ key: 'STENCIL_LOAD_FAILED', cause });
+      },
+    );
+  }
+
   private thumbnailRecord(): Record<string, string> {
-    const result: Record<string, string> = {};
+    // no prototype: ids are used as keys
+    const result = Object.create(null) as Record<string, string>;
     this.thumbCache.forEach((value, key) => {
       result[key] = value;
     });
@@ -556,7 +701,13 @@ export class FaceFrameEditorComponent implements OnDestroy {
     })();
   }
 
-  private renderDataUrl(config: FrameConfig, image: HTMLImageElement | null, photo: PhotoTransform, size: number): string {
+  private renderDataUrl(
+    config: FrameConfig,
+    image: HTMLImageElement | null,
+    photo: PhotoTransform,
+    size: number,
+    overlay: HTMLImageElement | null,
+  ): string {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -564,8 +715,14 @@ export class FaceFrameEditorComponent implements OnDestroy {
     if (!ctx) {
       return '';
     }
-    renderFrame(ctx, size, config, image, photo);
-    return canvas.toDataURL('image/png');
+    renderFrame(ctx, size, config, image, photo, undefined, overlay);
+    try {
+      return canvas.toDataURL('image/png');
+    } catch (cause) {
+      // tainted canvas, e.g. stencil image without CORS
+      this.frameError.emit({ key: 'STENCIL_LOAD_FAILED', cause });
+      return '';
+    }
   }
 
   private async load(source: Blob | string | null): Promise<HTMLImageElement | null> {
@@ -596,7 +753,15 @@ export class FaceFrameEditorComponent implements OnDestroy {
 
 function searchText(s: Stencil, translate: (text: string) => string): string {
   const c = s.config;
-  const badge = c.badge ? [...c.badge.lines, c.badge.shape === 'diagonal' ? c.badge.title : ''] : [];
-  const words = [s.label, s.category ?? '', ...(s.tags ?? []), ...c.texts.map(t => t.text), ...badge];
+  const badge = c.badge
+    ? [...c.badge.lines, c.badge.shape === 'diagonal' ? c.badge.title : '']
+    : [];
+  const words = [
+    s.label,
+    s.category ?? '',
+    ...(s.tags ?? []),
+    ...c.texts.map((t) => t.text),
+    ...badge,
+  ];
   return [...words, ...words.map(translate)].join(' ').toLowerCase();
 }
