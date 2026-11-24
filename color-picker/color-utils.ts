@@ -21,7 +21,7 @@ export function normalizeHex(value: string): string | null {
 
 export function hexToHsv(value: string): Hsv {
   const hex = normalizeHex(value) ?? '#000000';
-  const n = parseInt(hex.slice(1), 16);
+  const n = Number.parseInt(hex.slice(1), 16);
   const r = ((n >> 16) & 255) / 255;
   const g = ((n >> 8) & 255) / 255;
   const b = (n & 255) / 255;

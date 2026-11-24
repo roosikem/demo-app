@@ -13,10 +13,10 @@
           #preview
           class="ff-canvas"
           tabindex="0"
-          role="img"
+          role="application"
+          aria-roledescription="photo preview"
           [class.ff-draggable]="hasImage()"
-          [style.width.px]="o.previewSize"
-          [style.height.px]="o.previewSize"
+          [style.--ff-preview-size.px]="o.previewSize"
           [attr.aria-label]="t().previewHint"
           [attr.aria-describedby]="uid + '-drag-hint'"
           (pointerdown)="onPointerDown($event)"

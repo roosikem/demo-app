@@ -12,7 +12,7 @@ export function imageStencils(baseUrl: string): Stencil[] {
       label: 'Laurel',
       tags: ['award', 'gold'],
       config: {
-        image: url('laurel.svg'),
+        image: url('laurel.png'),
         ring: null,
         texts: [
           {
@@ -34,7 +34,7 @@ export function imageStencils(baseUrl: string): Stencil[] {
       label: 'Confetti party',
       tags: ['party', 'celebration'],
       config: {
-        image: url('confetti.svg'),
+        image: url('confetti.png'),
         ring: null,
         texts: [],
         photoClip: 'outer',
@@ -59,6 +59,20 @@ export function imageStencils(baseUrl: string): Stencil[] {
             fontWeight: 800,
           },
         ],
+        photoClip: 'outer',
+        photoBackground: BG,
+      },
+    },
+    {
+      id: 'image-star-ring',
+      category: 'Artwork',
+      label: 'Star ring',
+      tags: ['stars', 'celebration', 'colourful'],
+      config: {
+        image: url('star-ring.png'),
+        ring: null,
+        // text is part of the image
+        texts: [],
         photoClip: 'outer',
         photoBackground: BG,
       },

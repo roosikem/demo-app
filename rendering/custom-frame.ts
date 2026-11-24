@@ -61,10 +61,12 @@ export interface TextLimits {
   readonly badgeLine: number;
 }
 
+const DEFAULT_TEXT_LIMITS: TextLimits = { text: TEXT_MAX_LENGTH, badgeLine: BADGE_LINE_MAX_LENGTH };
+
 export function buildCustomFrame(
   s: CustomFrameState,
   palettes: readonly Palette[] = PALETTES,
-  limits: TextLimits = { text: TEXT_MAX_LENGTH, badgeLine: BADGE_LINE_MAX_LENGTH },
+  limits: TextLimits = DEFAULT_TEXT_LIMITS,
 ): FrameConfig {
   const palette = paletteColors(s.paletteId, palettes);
   const fill: RingFill =

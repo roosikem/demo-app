@@ -46,15 +46,20 @@
 
 .ff-stage {
   position: relative;
+  min-width: 0;
   display: grid;
   place-items: center;
   padding: 12px;
   border-radius: var(--ff-r-lg);
   background: var(--ff-soft);
 }
-.ff-canvas {
+// always square, also when the card is narrower than the preview size (host page styles)
+.ff-stage .ff-canvas {
+  display: block;
+  width: min(100%, var(--ff-preview-size, 320px));
   max-width: 100%;
   height: auto;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   touch-action: none;
   box-shadow: 0 0 0 1px rgb(16 24 40 / 8%);

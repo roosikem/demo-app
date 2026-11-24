@@ -64,6 +64,12 @@ export interface FaceFrameOptions {
   readonly colorNames: Readonly<Record<string, string>>;
   /** https hosts for stencil images besides the own origin */
   readonly imageHosts: readonly string[];
+  /**
+   * URL of stencils.json (written by scripts/face-frame-stencils.mjs), e.g.
+   * 'assets/face-frame/stencils/stencils.json'. Its image stencils are added after `stencils`.
+   * Same origin only; null = no manifest.
+   */
+  readonly stencilManifest: string | null;
 }
 
 export type FaceFrameOptionsInput = Partial<
@@ -114,6 +120,7 @@ export const DEFAULT_FACE_FRAME_OPTIONS: FaceFrameOptions = deepFreeze({
   translateStencilTexts: false,
   colorNames: COLOR_NAMES,
   imageHosts: [],
+  stencilManifest: null,
 });
 
 export const FACE_FRAME_OPTIONS = new InjectionToken<FaceFrameOptionsInput>('FACE_FRAME_OPTIONS');
@@ -163,6 +170,7 @@ export function mergeFaceFrameOptions(
     badgeIcons: [...merged.badgeIcons],
     defaultCustom: { ...merged.defaultCustom },
     imageHosts,
+    stencilManifest: typeof merged.stencilManifest === 'string' ? merged.stencilManifest : null,
     stencils: sanitizeStencils(merged.stencils, { imageHosts }),
     export: { ...merged.export, size: clamp(merged.export.size, MIN_EXPORT_SIZE, MAX_EXPORT_SIZE) },
     download: {
@@ -177,7 +185,12 @@ export function mergeFaceFrameOptions(
 }
 
 export interface FaceFrameError {
-  readonly key: 'LOAD_FAILED' | 'EXPORT_FAILED' | 'DOWNLOAD_FAILED' | 'STENCIL_LOAD_FAILED';
+  readonly key:
+    | 'LOAD_FAILED'
+    | 'EXPORT_FAILED'
+    | 'DOWNLOAD_FAILED'
+    | 'STENCIL_LOAD_FAILED'
+    | 'STENCIL_MANIFEST_FAILED';
   readonly cause: unknown;
 }
 

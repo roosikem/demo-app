@@ -37,6 +37,7 @@ import {
 import { DEFAULT_LABELS, FrameLabels } from '../config/frame-labels';
 import { contrastRatio, geometry, renderFrame, renderToBlob } from '../rendering/frame-renderer';
 import { loadStencilImage } from '../rendering/stencil-images';
+import { loadStencilManifest } from '../config/stencil-manifest';
 import {
   BadgeIcon,
   ExportFormat,
@@ -53,6 +54,8 @@ type Tab = FaceFrameState['tab'];
 const THUMB_SIZE = 72;
 const THUMB_BATCH = 8;
 const SEARCH_MAX_LENGTH = 64;
+// same rule as stencil ids (config/stencil-validation.ts)
+const SAVED_ID = /^[A-Za-z0-9][\w-]{0,63}$/;
 const ZOOM_STEP_BUTTON = 1.1;
 const ZOOM_STEP_WHEEL = 1.06;
 const ZOOM_STEP_KEY = 1.05;
@@ -87,9 +90,20 @@ export class FaceFrameEditorComponent implements OnDestroy {
   readonly frameError = output<FaceFrameError>();
 
   private readonly appOptions = inject(FACE_FRAME_OPTIONS, { optional: true });
-  protected readonly opts = computed<FaceFrameOptions>(() =>
+  private readonly baseOpts = computed<FaceFrameOptions>(() =>
     mergeFaceFrameOptions(DEFAULT_FACE_FRAME_OPTIONS, this.appOptions, this.options()),
   );
+  // premade image stencils from stencils.json (options.stencilManifest)
+  private readonly manifestUrl = computed(() => this.baseOpts().stencilManifest);
+  private readonly manifestStencils = signal<readonly Stencil[]>([]);
+  private readonly manifestStatus = signal<'none' | 'pending' | 'ready' | 'failed'>('none');
+  protected readonly opts = computed<FaceFrameOptions>(() => {
+    const base = this.baseOpts();
+    const extra = this.manifestStencils();
+    return extra.length
+      ? mergeFaceFrameOptions(base, { stencils: [...base.stencils, ...extra] })
+      : base;
+  });
   protected readonly t = computed<FrameLabels>(() => ({
     ...DEFAULT_LABELS,
     ...this.opts().labels,
@@ -119,9 +133,31 @@ export class FaceFrameEditorComponent implements OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   // parent's [(state)] if set, otherwise the defaults
-  private readonly current = linkedSignal<FaceFrameState>(() =>
-    sanitizeFaceFrameState(this.state(), this.opts()),
+  private readonly current = linkedSignal<FaceFrameState>(() => {
+    const raw = this.state();
+    const sanitized = sanitizeFaceFrameState(raw, this.opts());
+    // a saved stencil from stencils.json is kept while the list loads or if it cannot be loaded,
+    // so it is not replaced by the default stencil (the preview shows the default meanwhile)
+    const status = this.manifestStatus();
+    const savedId = raw?.stencilId;
+    if (
+      (status === 'pending' || status === 'failed') &&
+      typeof savedId === 'string' &&
+      savedId !== sanitized.stencilId &&
+      SAVED_ID.test(savedId)
+    ) {
+      return { ...sanitized, stencilId: savedId };
+    }
+    return sanitized;
+  });
+  // the saved stencil may come with stencils.json: draw and emit nothing until it is loaded
+  private readonly waitingForManifest = computed(
+    () =>
+      this.manifestStatus() === 'pending' &&
+      this.tab() === 'stencils' &&
+      !this.opts().stencils.some((s) => s.id === this.stencilId()),
   );
+  private taintReported = false;
   protected readonly tab = computed<Tab>(() => {
     const { customTab, stencilsTab } = this.features();
     if (!stencilsTab) {
@@ -229,6 +265,34 @@ export class FaceFrameEditorComponent implements OnDestroy {
   private exportAgain = false;
 
   constructor() {
+    // runs only when the manifest URL changes (computed string), so a failure is reported once
+    effect((onCleanup) => {
+      const url = this.manifestUrl();
+      let cancelled = false;
+      onCleanup(() => (cancelled = true));
+      untracked(() => {
+        this.manifestStencils.set([]);
+        this.manifestStatus.set(url ? 'pending' : 'none');
+      });
+      if (!url) {
+        return;
+      }
+      loadStencilManifest(url).then(
+        (stencils) => {
+          if (!cancelled) {
+            this.manifestStencils.set(stencils);
+            this.manifestStatus.set('ready');
+          }
+        },
+        (cause) => {
+          if (!cancelled) {
+            this.manifestStatus.set('failed');
+            this.frameError.emit({ key: 'STENCIL_MANIFEST_FAILED', cause });
+          }
+        },
+      );
+    });
+
     effect((onCleanup) => {
       const source = this.source();
       let cancelled = false;
@@ -258,11 +322,12 @@ export class FaceFrameEditorComponent implements OnDestroy {
       const photo = this.photo();
       const image = this.image();
       const cssSize = this.opts().previewSize;
-      if (!canvas) {
+      if (!canvas || this.waitingForManifest()) {
         return;
       }
       const size = Math.round(cssSize * Math.min(3, window.devicePixelRatio || 1));
-      if (canvas.width !== size) {
+      // check both: a new canvas is 300x150, so the width alone can already match
+      if (canvas.width !== size || canvas.height !== size) {
         canvas.width = size;
         canvas.height = size;
       }
@@ -719,8 +784,11 @@ export class FaceFrameEditorComponent implements OnDestroy {
     try {
       return canvas.toDataURL('image/png');
     } catch (cause) {
-      // tainted canvas, e.g. stencil image without CORS
-      this.frameError.emit({ key: 'STENCIL_LOAD_FAILED', cause });
+      // tainted canvas, e.g. stencil image without CORS; reported once, not on every render
+      if (!this.taintReported) {
+        this.taintReported = true;
+        this.frameError.emit({ key: 'STENCIL_LOAD_FAILED', cause });
+      }
       return '';
     }
   }

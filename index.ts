@@ -22,6 +22,7 @@ export { DEFAULT_LABELS } from './config/frame-labels';
 export type { FrameLabels } from './config/frame-labels';
 export { FONTS, PALETTES, STENCILS, SWATCHES, TEXT_SWATCHES } from './stencils/stencils';
 export { imageStencils } from './stencils/image-stencils';
+export { parseStencilManifest } from './config/stencil-manifest';
 export type { Palette } from './stencils/stencils';
 export { renderFrame, renderToBlob } from './rendering/frame-renderer';
 export type * from './models/frame.model';

@@ -9,7 +9,8 @@ user's photo, so a new stencil needs no new code. This guide describes the forma
 |---|---|
 | Stencil shipped with the face-frame module | `stencils/stencils.ts` (`STENCILS`) or `stencils/stencil-library.ts` (`STENCIL_LIBRARY`) |
 | Company / page specific stencils (recommended) | a file in the app, e.g. `src/app/photo/company-stencils.ts`, passed in via `frameOptions.stencils` or `provideFaceFrame({ stencils })` |
-| Stencil with designer artwork | image in `src/assets/face-frame/stencils/` + entry with `config.image` (see `stencils/image-stencils.ts`) |
+| **Premade image stencil (recommended for artwork)** | only the image file in `src/assets/face-frame/stencils/` – no code, see "Premade stencils from the assets folder" |
+| Image stencil with texts from code | image in `src/assets/face-frame/stencils/` + entry with `config.image` and `config.texts` (see `stencils/image-stencils.ts`) |
 
 Passing stencils from the app keeps this folder unchanged, so it can be replaced by a newer version:
 
@@ -156,21 +157,41 @@ In `stencil-library.ts` the helper `frame({...})` fills `photoClip: 'inner'` and
 7. **Ids are permanent:** users' saved designs refer to them. To retire a stencil remove it from the list
    (saved designs fall back to the default); never reuse an old id for a different design.
 
+## Premade stencils from the assets folder
+
+A premade stencil is one finished image: frame artwork **and text** are in the image. A stencil in another
+language is another image. No code change is needed to add one:
+
+1. Put the image into `src/assets/face-frame/stencils/` (file rules: see "Image stencils" below).
+   - directly in the folder → category "Artwork"
+   - in a subfolder → the subfolder is the category, e.g. `celebration/star-ring.png` → "Celebration"
+2. `npm run build` (or `npm start`) runs `scripts/face-frame-stencils.mjs` first. It writes
+   `stencils.json` next to the images. A file that breaks a rule (SVG or other format, wrong size, no
+   transparency, > 1 MB, unsafe name, > 200 stencils) is an **error: the build stops** and nothing is written,
+   so the file cannot be deployed. > 200 KB is only a warning.
+   Without the npm hook run it by hand: `node scripts/face-frame-stencils.mjs src/assets/face-frame/stencils`
+3. Commit the image **and** `stencils.json`, deploy. The editor loads `stencils.json`
+   (`provideFaceFrame({ stencilManifest: 'assets/face-frame/stencils/stencils.json' })`, resolved like the app's
+   own links against `<base href>`) and shows the new stencil after the drawn ones. `stencilManifest` must be a
+   fixed value in the code, never taken from user input.
+
+Names: file names with letters, digits, `-` and `_` only. `star-ring.png` gets the id `img-star-ring` and the
+label "Star ring". Label, category and tags can be edited in `stencils.json`; the script keeps them on the next
+run (cut to 40 / 30 characters, max. 10 tags). **The id is stored in users' saved designs: do not rename or
+delete a file that is in use** (those users get the default stencil). While `stencils.json` loads, or if it
+cannot be loaded, a saved stencil from it stays selected in the state; the preview waits for the list (on a
+load error it shows the default stencil and emits `STENCIL_MANIFEST_FAILED` once).
+
+At runtime `stencils.json` is checked again (same origin only, no redirects, plain PNG/WebP file names, no `..`,
+max. 200 entries), then every entry goes through the normal stencil validation.
+
 ## Image stencils
 
-- Square 1024×1024 px PNG or WebP (SVG only if delivered by the design team and served from the app itself),
-  transparent centre and corners, frame inside a circle of radius 504 px, centred.
-- Compressed, aim for < 200 KB per file.
-- Served from the app (`assets/`) or from an https host listed in `options.imageHosts`; other URLs are dropped
-  by the validation.
-- SVG files must not contain `<script>`, `on…=` attributes, `href`, `<use>`, `<image>`, `<foreignObject>`
-  or external references. Check before adding:
-
-  ```bash
-  grep -inE '<script|on[a-z]+\s*=|javascript:|<foreignObject|href\s*=|<use|<image|@import|url\(\s*https?:' file.svg
-  ```
-
-  No output = ok.
+- Square 1024×1024 px **PNG or WebP only (no SVG)**, transparent centre and corners, frame inside a circle of
+  radius 504 px, centred.
+- Compressed, aim for < 200 KB per file (max. 1 MB for premade stencils).
+- Served from the app (`assets/`) or from an https host listed in `options.imageHosts`; other URLs and other
+  formats are dropped by the validation.
 
 ## Validation at runtime
 
@@ -184,6 +205,6 @@ that are not allowed are removed. If a new stencil does not show up, check it ag
 2. `npm test` – the stencil tests check ids, values and text contrast for the default list.
 3. Look at it in the gallery (`#frame-gallery` in the demo, or the Premade stencils tab): text fits, nothing
    overlaps, readable at the small chat preview size.
-4. For image stencils: file size, transparent centre, SVG check.
+4. For image stencils: PNG/WebP, file size, transparent centre (premade stencils: the script checks this).
 5. If the stencil is in the default list, update the count in `face-frame.spec.ts`
    (`has the 9 base stencils plus 50 library stencils`).

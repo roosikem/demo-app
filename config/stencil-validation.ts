@@ -19,7 +19,8 @@ const SAFE_ID = /^[A-Za-z0-9][\w-]{0,63}$/;
 const RESERVED_IDS = ['constructor', 'prototype', 'hasOwnProperty', 'toString', 'valueOf'];
 const ICONS: readonly BadgeIcon[] = ['none', 'check', 'star', 'heart', 'cloud'];
 const BUBBLE_STYLES: readonly BubbleStyle[] = ['floating', 'joined', 'flush'];
-const IMAGE_EXTENSIONS = /\.(png|webp|svg)$/i;
+// stencil images are PNG or WebP only (no SVG)
+const IMAGE_EXTENSIONS = /\.(png|webp)$/i;
 const MAX_TEXTS = 4;
 const MAX_DECORATIONS = 24;
 const MAX_COLORS = 12;
@@ -78,12 +79,7 @@ export function isAllowedStencilImage(url: string, policy: StencilImagePolicy): 
   if (base && parsed.origin === location.origin) {
     return true;
   }
-  // remote SVG is not allowed, it can contain markup that taints the canvas
-  return (
-    parsed.protocol === 'https:' &&
-    !/\.svg$/i.test(parsed.pathname) &&
-    policy.imageHosts.indexOf(parsed.host) >= 0
-  );
+  return parsed.protocol === 'https:' && policy.imageHosts.indexOf(parsed.host) >= 0;
 }
 
 /** 'CDN.Example.com', 'cdn.example.com:443' -> 'cdn.example.com'; other ports are kept; invalid -> null */
@@ -228,7 +224,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
-  const proto = Object.getPrototypeOf(value);
+  const proto: unknown = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
 }
 

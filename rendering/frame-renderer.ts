@@ -574,7 +574,7 @@ function luminance(hex: string): number | null {
   if (!m) {
     return null;
   }
-  const n = parseInt(m[1], 16);
+  const n = Number.parseInt(m[1], 16);
   const channel = (v: number): number => {
     const s = v / 255;
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
