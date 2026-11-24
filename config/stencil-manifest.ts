@@ -4,11 +4,11 @@ import { BG } from '../stencils/colors';
 // stencils.json, written by scripts/face-frame-stencils.mjs:
 // { "version": 1, "stencils": [{ "id": "img-star-ring", "file": "star-ring.png", "label": "Star ring",
 //   "category": "Artwork", "tags": [] }] }
-// Premade image stencils: PNG / WebP only, the text is part of the image, so no texts are added here.
+// Premade image stencils: PNG only, the text is part of the image, so no texts are added here.
 
 export const MAX_MANIFEST_ENTRIES = 200;
 // one optional subfolder, no "..", no absolute paths, URLs, queries or SVG
-const SAFE_FILE = /^[a-z0-9][\w-]*(\/[a-z0-9][\w-]*)?\.(png|webp)$/i;
+const SAFE_FILE = /^[a-z0-9][\w-]*(\/[a-z0-9][\w-]*)?\.png$/i;
 const MANIFEST_PATH = /\.json$/i;
 
 const cache = new Map<string, Promise<readonly Stencil[]>>();

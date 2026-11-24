@@ -19,8 +19,8 @@ const SAFE_ID = /^[A-Za-z0-9][\w-]{0,63}$/;
 const RESERVED_IDS = ['constructor', 'prototype', 'hasOwnProperty', 'toString', 'valueOf'];
 const ICONS: readonly BadgeIcon[] = ['none', 'check', 'star', 'heart', 'cloud'];
 const BUBBLE_STYLES: readonly BubbleStyle[] = ['floating', 'joined', 'flush'];
-// stencil images are PNG or WebP only (no SVG)
-const IMAGE_EXTENSIONS = /\.(png|webp)$/i;
+// stencil images are PNG only (no SVG, WebP, ...)
+const IMAGE_EXTENSIONS = /\.png$/i;
 const MAX_TEXTS = 4;
 const MAX_DECORATIONS = 24;
 const MAX_COLORS = 12;

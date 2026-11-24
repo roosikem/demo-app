@@ -651,7 +651,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
     const c = stencil.config;
     const badge = c.badge && {
       ...c.badge,
-      lines: c.badge.lines.map(translate),
+      lines: c.badge.lines.map((line) => translate(line)),
       ...(c.badge.shape === 'diagonal' ? { title: translate(c.badge.title) } : {}),
     };
     return { ...c, texts: c.texts.map((t) => ({ ...t, text: translate(t.text) })), badge };

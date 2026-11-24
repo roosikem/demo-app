@@ -182,12 +182,62 @@ delete a file that is in use** (those users get the default stencil). While `ste
 cannot be loaded, a saved stencil from it stays selected in the state; the preview waits for the list (on a
 load error it shows the default stencil and emits `STENCIL_MANIFEST_FAILED` once).
 
-At runtime `stencils.json` is checked again (same origin only, no redirects, plain PNG/WebP file names, no `..`,
+At runtime `stencils.json` is checked again (same origin only, no redirects, plain PNG file names, no `..`,
 max. 200 entries), then every entry goes through the normal stencil validation.
+
+## Premade stencils from the server
+
+Instead of the assets folder, the backend can serve the stencils from a zip:
+`provideFaceFrame({ stencilManifest: '/api/face-frame/stencils/stencils.json' })` (leading `/`; the API must be
+on the same origin as the app). The images are then loaded from the same URL folder, e.g.
+`/api/face-frame/stencils/Celebration/star-ring.png`. Use either this or the assets folder, not both.
+
+The zip is stored in the file storage; its file id is configured with `-Dfaceframe.stencils.file-id=<id>` (or
+the environment variable `FACEFRAME_STENCILS_FILE_ID`). The server reads it once at start
+(`FileStorageServiceLocal.getFileByFieldId`, wrapped by `StencilStorage`).
+
+```
+stencils.zip                 zip the contents of the folder, not the folder itself
+├── stencils.json            exactly this name, at the top level
+├── laurel.png
+└── Celebration/             at most one subfolder level
+    └── star-ring.png
+```
+
+Only PNG files and `stencils.json` are allowed in the zip (`__MACOSX/`, `.DS_Store`, `Thumbs.db` and `.gitkeep`
+are skipped). Limits: 200 stencils, 1 MB per file, 50 MB unpacked, 60 MB for the zip.
+
+`stencils.json` is the master list and is required. Every PNG is listed exactly once, in the order shown:
+
+```json
+{
+  "version": 1,
+  "stencils": [
+    { "id": "img-celebration-star-ring", "file": "Celebration/star-ring.png", "label": "Star ring",
+      "category": "Celebration", "tags": ["stars"] }
+  ]
+}
+```
+
+- `id`: starts with `img-` (keeps it apart from the built-in stencils), then letters, digits, `-`, `_`,
+  max. 64 characters, unique. It is stored in users' saved designs: keep it when an image is replaced or renamed.
+- `file`: path in the zip, case-sensitive.
+- `label` (max. 40 characters) and `category` (max. 30): required. `tags`: optional, max. 10 of 30 characters.
+  Lengths count like JavaScript `length` (an emoji usually counts 2). No control characters, text direction
+  marks or `<` `>`; emoji sequences and soft hyphens are fine.
+- Other fields are not passed on to the browser.
+
+The images follow the rules in "Image stencils" below. **One mistake rejects the whole zip** (missing or invalid
+`stencils.json`, an image without an entry, an entry without an image, a duplicate id, a bad image, ...): the
+server log shows the reason as SEVERE and the editor shows only the built-in stencils.
+
+A first `stencils.json` can be written with `node scripts/face-frame-stencils.mjs <folder>`: it applies the same
+rules, so a folder it accepts is accepted by the server. It takes ids and labels from the names (file name max.
+40 characters for the label, folder name max. 30 for the category) and keeps edited label, category and tags.
 
 ## Image stencils
 
-- Square 1024×1024 px **PNG or WebP only (no SVG)**, transparent centre and corners, frame inside a circle of
+- Square 1024×1024 px **PNG only (no SVG, WebP, JPEG)**, transparent centre and corners, frame inside a circle of
   radius 504 px, centred.
 - Compressed, aim for < 200 KB per file (max. 1 MB for premade stencils).
 - Served from the app (`assets/`) or from an https host listed in `options.imageHosts`; other URLs and other
@@ -205,6 +255,6 @@ that are not allowed are removed. If a new stencil does not show up, check it ag
 2. `npm test` – the stencil tests check ids, values and text contrast for the default list.
 3. Look at it in the gallery (`#frame-gallery` in the demo, or the Premade stencils tab): text fits, nothing
    overlaps, readable at the small chat preview size.
-4. For image stencils: PNG/WebP, file size, transparent centre (premade stencils: the script checks this).
+4. For image stencils: PNG, file size, transparent centre (premade stencils: the script checks this).
 5. If the stencil is in the default list, update the count in `face-frame.spec.ts`
    (`has the 9 base stencils plus 50 library stencils`).

@@ -14,7 +14,7 @@
           class="ff-canvas"
           tabindex="0"
           role="application"
-          aria-roledescription="photo preview"
+          [attr.aria-roledescription]="t().previewRole"
           [class.ff-draggable]="hasImage()"
           [style.--ff-preview-size.px]="o.previewSize"
           [attr.aria-label]="t().previewHint"

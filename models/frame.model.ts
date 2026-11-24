@@ -74,7 +74,7 @@ export interface FrameConfig {
   readonly photoClip: 'inner' | 'outer';
   readonly photoBackground: string;
   /**
-   * URL of a square stencil image with a transparent centre (PNG/SVG/WebP), drawn over the photo.
+   * URL of a square stencil image with a transparent centre (PNG only), drawn over the photo.
    * Must be same-origin or served with CORS headers, otherwise the framed photo cannot be exported.
    */
   readonly image?: string;

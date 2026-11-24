@@ -39,6 +39,8 @@ export interface FrameLabels {
   readonly resetFrame: string;
   readonly preview: string;
   readonly previewHint: string;
+  /** Screen readers announce the preview with this name instead of "application". */
+  readonly previewRole: string;
   readonly smallPreview: string;
   readonly format: string;
   readonly download: string;
@@ -118,6 +120,7 @@ export const DEFAULT_LABELS: FrameLabels = deepFreeze({
   resetFrame: 'Reset frame',
   preview: 'Framed photo preview',
   previewHint: 'Preview of your framed profile photo',
+  previewRole: 'photo preview',
   smallPreview: 'As shown in chats',
   format: 'Download format',
   download: 'Download image',
