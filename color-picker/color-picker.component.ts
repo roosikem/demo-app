@@ -12,9 +12,11 @@ import {
 } from '@angular/core';
 import { Hsv, hexToHsv, hsvToHex, normalizeHex } from './color-utils';
 
+// Color field with a hex input and a hue / saturation picker, used for the ring, text and badge colors.
+
 let nextId = 0;
 
-/** Swatches plus a custom colour panel. */
+/** Swatches plus a custom color panel. */
 @Component({
   selector: 'app-color-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,

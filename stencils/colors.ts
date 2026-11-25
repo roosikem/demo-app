@@ -1,6 +1,7 @@
 import { deepFreeze } from '../models/freeze';
 
-// TODO: map to the brand colours
+// Named colors shared by the palettes and the example stencils.
+
 export const WHITE = '#ffffff';
 export const INK = '#1b1b1b';
 export const BG = '#eef1f4';
@@ -29,13 +30,13 @@ export const AQUA = '#19b6a4';
 export const SPRING = '#2be38a';
 export const PHOTO_BG = '#e9edf2';
 
-// Dark text colours for light rings
+// Dark text colors for light rings
 export const BROWN = '#3a2500';
 export const FOREST = '#0b2e1f';
 export const DEEP_SEA = '#062a3a';
 export const DEEP_MINT = '#063b33';
 
-/** Accessible names of the swatch colours. */
+/** Accessible names of the swatch colors. */
 export const COLOR_NAMES: Readonly<Record<string, string>> = deepFreeze({
   [NAVY]: 'Navy',
   [TEAL]: 'Teal',

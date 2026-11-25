@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   OnDestroy,
+  Signal,
   computed,
   effect,
   inject,
@@ -15,6 +16,7 @@ import {
   viewChild,
 } from '@angular/core';
 import {
+  BADGE_SIZE,
   CustomFrameState,
   RING_WIDTH,
   buildCustomFrame,
@@ -31,13 +33,24 @@ import {
 import {
   FaceFrameState,
   initialFaceFrameState,
+  sanitizeBadgePosition,
   sanitizeFaceFrameState,
   sanitizePhoto,
 } from '../config/face-frame-state';
 import { DEFAULT_LABELS, FrameLabels } from '../config/frame-labels';
-import { contrastRatio, geometry, renderFrame, renderToBlob } from '../rendering/frame-renderer';
+import {
+  JPEG_BACKGROUND,
+  bubblePlacement,
+  canvasToBlob,
+  contrastRatio,
+  geometry,
+  renderFrame,
+  renderToBlob,
+  solidRingColor,
+} from '../rendering/frame-renderer';
 import { loadStencilImage } from '../rendering/stencil-images';
-import { loadStencilManifest } from '../config/stencil-manifest';
+import { isRoundBadge } from '../rendering/badge-position';
+import { textArc, withTextAt } from '../rendering/text-position';
 import {
   BadgeIcon,
   ExportFormat,
@@ -46,23 +59,38 @@ import {
   Stencil,
 } from '../models/frame.model';
 import { Palette } from '../stencils/stencils';
+import { NO_STICKERS, Sticker, withDraft } from '../stickers/sticker.model';
+import { SAFE_ID } from '../models/ids';
+import {
+  drawArcSelection,
+  drawCircleSelection,
+  drawSelection,
+  drawStickers,
+} from '../stickers/sticker-drawing';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { FfIconComponent } from '../icon/ff-icon.component';
+import { BadgeMover, withBadgeAt } from './badge-mover';
+import { EditorContext, Selectable, Tab } from './editor-context';
+import { StencilImageCache } from './stencil-image-cache';
+import { TextMeasure } from './text-measure';
+import { ServerSources } from './server-sources';
+import { StencilFinder } from './stencil-finder';
+import { StencilThumbnails } from './stencil-thumbnails';
+import { StickerLayer } from './sticker-layer';
+import { TextMover } from './text-mover';
 
-type Tab = FaceFrameState['tab'];
+// The FaceFrame editor: puts a frame around the user's profile photo and exports the result.
+// The component wires the parts together (see editor-context.ts); each part lives in its own file.
 
-const THUMB_SIZE = 72;
-const THUMB_BATCH = 8;
-const SEARCH_MAX_LENGTH = 64;
-// same rule as stencil ids (config/stencil-validation.ts)
-const SAVED_ID = /^[A-Za-z0-9][\w-]{0,63}$/;
 const ZOOM_STEP_BUTTON = 1.1;
 const ZOOM_STEP_WHEEL = 1.06;
 const ZOOM_STEP_KEY = 1.05;
+const SMALL_PREVIEW_SIZE = 96;
+// used when the page does not define --ff-primary
+const SELECTION_COLOR = '#00646d';
 
 let nextId = 0;
 
-/** Profile photo frame editor. */
 @Component({
   selector: 'app-face-frame-editor',
   imports: [ColorPickerComponent, FfIconComponent],
@@ -71,6 +99,7 @@ let nextId = 0;
     './face-frame-editor.component.scss',
     './face-frame-controls.scss',
     './face-frame-gallery.scss',
+    './face-frame-stickers.scss',
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(window:resize)': 'onResize()' },
@@ -90,21 +119,34 @@ export class FaceFrameEditorComponent implements OnDestroy {
   readonly frameError = output<FaceFrameError>();
 
   private readonly appOptions = inject(FACE_FRAME_OPTIONS, { optional: true });
-  private readonly baseOpts = computed<FaceFrameOptions>(() =>
-    mergeFaceFrameOptions(DEFAULT_FACE_FRAME_OPTIONS, this.appOptions, this.options()),
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  protected readonly sources: ServerSources = new ServerSources({
+    // set by the app, never by the server settings themselves
+    settingsUrl: () => {
+      const url = this.options()?.settingsUrl ?? this.appOptions?.settingsUrl;
+      return typeof url === 'string' ? url : null;
+    },
+    manifestUrl: (): string | null => this.baseOpts().stencilManifest,
+    settingsFallback: () => this.opts().settingsFallback,
+    reportError: (error) => this.frameError.emit(error),
+  });
+  private readonly baseOpts: Signal<FaceFrameOptions> = computed(() =>
+    mergeFaceFrameOptions(
+      DEFAULT_FACE_FRAME_OPTIONS,
+      this.appOptions,
+      this.options(),
+      this.sources.settings(),
+    ),
   );
-  // premade image stencils from stencils.json (options.stencilManifest)
-  private readonly manifestUrl = computed(() => this.baseOpts().stencilManifest);
-  private readonly manifestStencils = signal<readonly Stencil[]>([]);
-  private readonly manifestStatus = signal<'none' | 'pending' | 'ready' | 'failed'>('none');
   protected readonly opts = computed<FaceFrameOptions>(() => {
     const base = this.baseOpts();
-    const extra = this.manifestStencils();
-    return extra.length
-      ? mergeFaceFrameOptions(base, { stencils: [...base.stencils, ...extra] })
+    const fromServer = this.sources.stencils();
+    return fromServer.length
+      ? mergeFaceFrameOptions(base, { stencils: [...base.stencils, ...fromServer] })
       : base;
   });
-  protected readonly t = computed<FrameLabels>(() => ({
+  protected readonly labels = computed<FrameLabels>(() => ({
     ...DEFAULT_LABELS,
     ...this.opts().labels,
   }));
@@ -122,177 +164,158 @@ export class FaceFrameEditorComponent implements OnDestroy {
   );
 
   protected readonly uid = `ff${nextId++}`;
-  protected readonly thumbSize = THUMB_SIZE;
-  protected readonly searchMaxLength = SEARCH_MAX_LENGTH;
   protected readonly ringWidth = RING_WIDTH;
+  protected readonly badgeSize = BADGE_SIZE;
   protected readonly ringStyles: readonly CustomFrameState['ringStyle'][] = [
     'solid',
     'gradient',
     'segments',
   ];
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  // parent's [(state)] if set, otherwise the defaults
+  // the parent's [(state)] if set, otherwise the defaults
   private readonly current = linkedSignal<FaceFrameState>(() => {
     const raw = this.state();
     const sanitized = sanitizeFaceFrameState(raw, this.opts());
-    // a saved stencil from stencils.json is kept while the list loads or if it cannot be loaded,
-    // so it is not replaced by the default stencil (the preview shows the default meanwhile)
-    const status = this.manifestStatus();
+    // keep a saved stencil from stencils.json (and its moved badge) while the list loads or has failed,
+    // so the next change does not save the default stencil instead
+    const status = this.sources.manifestStatus();
     const savedId = raw?.stencilId;
     if (
       (status === 'pending' || status === 'failed') &&
       typeof savedId === 'string' &&
       savedId !== sanitized.stencilId &&
-      SAVED_ID.test(savedId)
+      SAFE_ID.test(savedId)
     ) {
-      return { ...sanitized, stencilId: savedId };
+      const badge = raw?.stencilBadge;
+      const position = badge?.stencilId === savedId ? sanitizeBadgePosition(badge) : null;
+      return position
+        ? { ...sanitized, stencilId: savedId, stencilBadge: { stencilId: savedId, ...position } }
+        : { ...sanitized, stencilId: savedId };
     }
     return sanitized;
   });
-  // the saved stencil may come with stencils.json: draw and emit nothing until it is loaded
-  private readonly waitingForManifest = computed(
-    () =>
-      this.manifestStatus() === 'pending' &&
-      this.tab() === 'stencils' &&
-      !this.opts().stencils.some((s) => s.id === this.stencilId()),
-  );
-  private taintReported = false;
   protected readonly tab = computed<Tab>(() => {
     const { customTab, stencilsTab } = this.features();
     if (!stencilsTab) {
       return 'custom';
     }
-    if (!customTab) {
-      return 'stencils';
-    }
-    return this.current().tab;
+    return customTab ? this.current().tab : 'stencils';
   });
   protected readonly custom = computed(() => this.current().custom);
+  protected readonly badgePercent = computed(() => this.custom().badgeSize ?? BADGE_SIZE.initial);
   protected readonly stencilId = computed(() => this.current().stencilId);
   protected readonly photo = computed(() => this.current().photo);
   protected readonly format = computed(() => this.current().downloadFormat);
 
-  protected readonly windowWidth = signal(typeof window === 'undefined' ? 1920 : window.innerWidth);
-  protected readonly tooSmall = computed(() => this.windowWidth() < this.opts().minWindowWidth);
+  private readonly context: EditorContext = {
+    opts: this.opts,
+    labels: this.labels,
+    tab: this.tab,
+    state: this.current,
+    update: (change) => this.update(change),
+    replaceState: (next) => this.replaceState(next),
+    patch: (change) => this.patch(change),
+    claimSelection: (part) => this.claimSelection(part),
+    focusPreview: () => this.canvas()?.nativeElement.focus(),
+    focusLater: (suffix) => requestAnimationFrame(() => this.findById(suffix)?.focus()),
+    reportError: (error) => this.frameError.emit(error),
+  };
+  private readonly measure = new TextMeasure();
+  private readonly stencilImages = new StencilImageCache((error) => this.frameError.emit(error));
 
-  private readonly image = signal<HTMLImageElement | null>(null);
-  readonly hasImage = computed(() => this.image() !== null);
-  protected readonly loadError = signal(false);
+  protected readonly finder = new StencilFinder(this.context, {
+    select: (id) => this.selectStencil(id),
+    scrollTo: (id, focus) => this.scrollToStencil(id, focus),
+  });
+  /** the stencil in the preview: the first one while the saved stencil is not (yet) available */
+  private readonly shownStencil = computed(() => this.finder.selected() ?? this.opts().stencils[0]);
 
-  readonly config = computed<FrameConfig>(() => {
+  /** The frame as designed, with the badge at its designed place. */
+  private readonly designedConfig = computed<FrameConfig>(() => {
     const o = this.opts();
-    if (this.tab() === 'stencils') {
-      const stencil = o.stencils.find((s) => s.id === this.stencilId()) ?? o.stencils[0];
-      if (stencil) {
-        return this.stencilConfig(stencil);
-      }
+    const stencil = this.tab() === 'stencils' ? this.shownStencil() : undefined;
+    if (stencil) {
+      return this.stencilConfig(stencil);
     }
-    return buildCustomFrame(this.custom(), o.palettes, {
+    const custom = o.features.textMove
+      ? { ...this.custom(), badgePosition: undefined }
+      : {
+          ...this.custom(),
+          badgePosition: undefined,
+          topTextAngle: undefined,
+          bottomTextAngle: undefined,
+        };
+    return buildCustomFrame(custom, o.palettes, {
       text: o.textMaxLength,
       badgeLine: o.badgeLineMaxLength,
     });
   });
+  protected readonly texts: TextMover = new TextMover(this.context, this.measure, () =>
+    this.textsPlaced(),
+  );
+  private readonly textsPlaced: Signal<FrameConfig> = computed(() =>
+    this.texts.applyTo(this.designedConfig()),
+  );
+  protected readonly badge: BadgeMover = new BadgeMover(this.context, this.measure, {
+    designed: this.designedConfig,
+    withTexts: this.textsPlaced,
+    drawn: () => this.config(),
+    stencil: this.shownStencil,
+  });
+  readonly config: Signal<FrameConfig> = computed(() => this.badge.applyTo(this.textsPlaced()));
 
+  protected readonly stickers = new StickerLayer(this.context, this.sources);
+
+  private readonly image = signal<HTMLImageElement | null>(null);
+  readonly hasImage = computed(() => this.image() !== null);
+  protected readonly loadError = signal(false);
+  private readonly dragging = signal(false);
+
+  protected readonly thumbnails = new StencilThumbnails(this.context, this.stencilImages, {
+    image: this.image,
+    photo: this.photo,
+    visible: this.finder.visible,
+    paused: this.dragging,
+    config: (stencil) => this.stencilConfig(stencil),
+    render: (config, image, photo, size, overlay) =>
+      this.dataUrl(config, image, photo, size, overlay),
+  });
+
+  protected readonly windowWidth = signal(typeof window === 'undefined' ? 1920 : window.innerWidth);
+  protected readonly tooSmall = computed(() => this.windowWidth() < this.opts().minWindowWidth);
   protected readonly topContrastLow = computed(() => this.contrastLow(this.custom().topColor));
   protected readonly bottomContrastLow = computed(() =>
     this.contrastLow(this.custom().bottomColor),
   );
-
-  protected readonly query = signal('');
-  protected readonly category = signal<string | null>(null);
-  protected readonly categories = computed(() => {
-    const seen: string[] = [];
-    for (const s of this.opts().stencils) {
-      if (s.category && !seen.includes(s.category)) {
-        seen.push(s.category);
-      }
-    }
-    return seen;
-  });
-  protected readonly visibleStencils = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    const cat = this.category();
-    const translate = this.opts().translate;
-    return this.opts().stencils.filter(
-      (s) => (!cat || s.category === cat) && (!q || searchText(s, translate).includes(q)),
-    );
-  });
-  // uncategorised stencils go last, without an optgroup
-  protected readonly stencilGroups = computed(() => {
-    const groups = this.categories().map((c) => ({
-      category: c,
-      stencils: this.opts().stencils.filter((s) => s.category === c),
-    }));
-    const rest = this.opts().stencils.filter((s) => !s.category);
-    return rest.length ? [...groups, { category: '', stencils: rest }] : groups;
-  });
-  protected readonly selectedStencil = computed(() =>
-    this.opts().stencils.find((s) => s.id === this.stencilId()),
+  protected readonly previewDescribedBy = computed(() =>
+    [
+      'drag-hint',
+      this.features().stickers ? 'sticker-hint' : '',
+      this.badge.movable() ? 'badge-hint' : '',
+      this.texts.movable() ? 'text-hint' : '',
+    ]
+      .filter(Boolean)
+      .map((suffix) => `${this.uid}-${suffix}`)
+      .join(' '),
   );
-  protected readonly selectedHidden = computed(
-    () =>
-      !!this.selectedStencil() && !this.visibleStencils().some((s) => s.id === this.stencilId()),
-  );
-  // roving tabindex: only one card is in the tab order
-  protected readonly focusableStencilId = computed(() =>
-    this.selectedHidden() ? this.visibleStencils()[0]?.id : this.stencilId(),
-  );
-  protected readonly resultText = computed(() => {
-    const count = this.t()
-      .resultCount.replace('{n}', String(this.visibleStencils().length))
-      .replace('{total}', String(this.opts().stencils.length));
-    const category = this.category();
-    return category ? `${count} · ${this.tr(category)}` : count;
-  });
-  protected readonly noMatchText = computed(() =>
-    this.t().noMatch.replace('{q}', this.query().trim()),
-  );
-
-  protected readonly thumbnails = signal<Record<string, string>>({});
-  private readonly thumbCache = new Map<string, string>();
-  private thumbKey = '';
-  private readonly stencilImages = signal<ReadonlyMap<string, HTMLImageElement>>(new Map());
-  private readonly requestedImages = new Set<string>();
-  private thumbStencils: readonly Stencil[] | null = null;
   protected readonly smallPreview = signal('');
 
+  // the saved stencil may come with stencils.json: draw and emit nothing until it is there
+  private readonly waitingForManifest = computed(
+    () =>
+      this.sources.manifestPending() &&
+      this.tab() === 'stencils' &&
+      !this.opts().stencils.some((s) => s.id === this.stencilId()),
+  );
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('preview');
   private objectUrl: string | null = null;
   private drag: { pointerId: number; x: number; y: number; start: PhotoTransform } | null = null;
-  private readonly dragging = signal(false);
   private exporting = false;
   private exportAgain = false;
+  private taintReported = false;
+  private selectionColor: string | null = null;
 
   constructor() {
-    // runs only when the manifest URL changes (computed string), so a failure is reported once
-    effect((onCleanup) => {
-      const url = this.manifestUrl();
-      let cancelled = false;
-      onCleanup(() => (cancelled = true));
-      untracked(() => {
-        this.manifestStencils.set([]);
-        this.manifestStatus.set(url ? 'pending' : 'none');
-      });
-      if (!url) {
-        return;
-      }
-      loadStencilManifest(url).then(
-        (stencils) => {
-          if (!cancelled) {
-            this.manifestStencils.set(stencils);
-            this.manifestStatus.set('ready');
-          }
-        },
-        (cause) => {
-          if (!cancelled) {
-            this.manifestStatus.set('failed');
-            this.frameError.emit({ key: 'STENCIL_MANIFEST_FAILED', cause });
-          }
-        },
-      );
-    });
-
     effect((onCleanup) => {
       const source = this.source();
       let cancelled = false;
@@ -316,28 +339,26 @@ export class FaceFrameEditorComponent implements OnDestroy {
       );
     });
 
+    // a design change: draw, emit `changed` and, when shown in the photo, `framedChange`
     effect(() => {
       const canvas = this.canvas()?.nativeElement;
       const config = this.config();
       const photo = this.photo();
       const image = this.image();
+      const stickers = this.stickers.list();
+      // a design with image stickers is drawn and sent again once stencils.json has offered them
+      this.stickers.imagesInUse();
       const cssSize = this.opts().previewSize;
+      // no canvas while the settings load (the template waits for them)
       if (!canvas || this.waitingForManifest()) {
         return;
       }
-      const size = Math.round(cssSize * Math.min(3, window.devicePixelRatio || 1));
-      // check both: a new canvas is 300x150, so the width alone can already match
-      if (canvas.width !== size || canvas.height !== size) {
-        canvas.width = size;
-        canvas.height = size;
-      }
-      const overlay = this.stencilImageFor(config);
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        renderFrame(ctx, size, config, image, photo, undefined, overlay);
-      }
+      const overlay = this.stencilImages.imageFor(config);
+      untracked(() => this.paintPreview(canvas, cssSize, overlay));
       if (untracked(this.features).chatPreview) {
-        this.smallPreview.set(this.renderDataUrl(config, image, photo, 96, overlay));
+        this.smallPreview.set(
+          this.dataUrl(config, image, photo, SMALL_PREVIEW_SIZE, overlay, stickers),
+        );
       }
       this.changed.emit({ config, photo });
       if (image && untracked(this.shownInPhoto)) {
@@ -345,29 +366,36 @@ export class FaceFrameEditorComponent implements OnDestroy {
       }
     });
 
-    // thumbnails: visible stencils only, cached per photo position, not while dragging
+    // drags and selections only repaint the preview: the design has not changed yet
     effect(() => {
-      if (this.tab() !== 'stencils' || this.dragging()) {
+      const { stickers, badgeMove, textMove } = this.features();
+      if (!stickers && !badgeMove && !textMove) {
         return;
       }
-      const image = this.image();
-      const photo = this.photo();
-      const stencils = this.opts().stencils;
-      const visible = this.visibleStencils();
-      visible.forEach((s) => s.config.image && this.requestStencilImage(s.config.image));
-      const loadedImages = this.stencilImages().size;
-      const key = `${image?.src ?? ''}|${photo.zoom}|${photo.rotation}|${photo.offsetX}|${photo.offsetY}|${loadedImages}`;
-      if (key !== this.thumbKey || stencils !== this.thumbStencils) {
-        this.thumbKey = key;
-        this.thumbStencils = stencils;
-        this.thumbCache.clear();
+      this.stickers.draft();
+      this.stickers.selected();
+      this.stickers.loadedImages();
+      this.badge.draft();
+      this.badge.selected();
+      this.texts.draft();
+      this.texts.selected();
+      // a new canvas is painted by the render effect
+      untracked(() => {
+        const canvas = this.canvas()?.nativeElement;
+        if (canvas && !this.waitingForManifest()) {
+          this.paintPreview(
+            canvas,
+            this.opts().previewSize,
+            this.stencilImages.imageFor(this.config()),
+          );
+        }
+      });
+    });
+
+    effect(() => {
+      if (this.stickers.loadedImages().size && this.features().chatPreview) {
+        untracked(() => this.refreshSmallPreview());
       }
-      this.renderThumbnails(
-        visible.filter((s) => !this.thumbCache.has(s.id)),
-        image,
-        photo,
-        key,
-      );
     });
   }
 
@@ -376,6 +404,11 @@ export class FaceFrameEditorComponent implements OnDestroy {
   }
 
   async exportImage(size?: number, format?: ExportFormat): Promise<Blob> {
+    // with the server's settings (e.g. the export size), once the editor has rendered;
+    // a loop, because a new settingsUrl starts a new load
+    while (this.sources.waitingForSettings()) {
+      await this.sources.settingsLoaded();
+    }
     const image = this.image();
     if (!image) {
       throw new Error('No photo loaded');
@@ -384,18 +417,34 @@ export class FaceFrameEditorComponent implements OnDestroy {
     const config = this.config();
     const photo = this.photo();
     const overlay = config.image ? await loadStencilImage(config.image) : null;
-    return renderToBlob(
-      config,
-      image,
-      photo,
-      size ?? o.export.size,
-      format ?? o.export.format,
-      overlay,
-    );
+    const outputSize = size ?? o.export.size;
+    const outputFormat = format ?? o.export.format;
+    const stickers = this.stickers.list();
+    if (!stickers.length) {
+      return renderToBlob(config, image, photo, outputSize, outputFormat, overlay);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = outputSize;
+    canvas.height = outputSize;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas 2D is not available');
+    }
+    const background = outputFormat === 'image/jpeg' ? JPEG_BACKGROUND : undefined;
+    const images = await this.stickers.imagesForExport();
+    renderFrame(ctx, outputSize, config, image, photo, background, overlay);
+    drawStickers(ctx, outputSize, stickers, images);
+    return canvasToBlob(canvas, outputFormat);
   }
 
   reset(): void {
-    this.update(initialFaceFrameState(this.opts()));
+    this.stickers.clear();
+    this.badge.clear();
+    this.texts.clear();
+    const initial = initialFaceFrameState(this.opts());
+    // like every other change, a reset leaves saved stickers alone while the feature is off
+    const { stickers } = this.current();
+    this.replaceState(this.features().stickers || !stickers ? initial : { ...initial, stickers });
   }
 
   protected onResize(): void {
@@ -441,64 +490,6 @@ export class FaceFrameEditorComponent implements OnDestroy {
     this.update({ downloadFormat: format });
   }
 
-  protected setCategory(category: string | null): void {
-    this.category.set(category);
-  }
-
-  protected setQuery(event: Event): void {
-    this.query.set(this.text(event).slice(0, SEARCH_MAX_LENGTH));
-  }
-
-  protected clearFilters(): void {
-    this.query.set('');
-    this.category.set(null);
-  }
-
-  protected jumpTo(id: string): void {
-    this.selectStencil(id);
-    if (this.selectedHidden()) {
-      this.clearFilters();
-    }
-    this.scrollToStencil(id, false);
-  }
-
-  protected showSelectedStencil(): void {
-    this.clearFilters();
-    this.scrollToStencil(this.stencilId(), true);
-  }
-
-  protected onGalleryKey(event: KeyboardEvent): void {
-    const list = this.visibleStencils();
-    if (!list.length) {
-      return;
-    }
-    const gallery = event.currentTarget as HTMLElement;
-    const card = gallery.querySelector<HTMLElement>('.ff-stencil');
-    const columns = card
-      ? Math.max(1, Math.round(gallery.clientWidth / (card.offsetWidth + 12)))
-      : 1;
-    const current = Math.max(
-      0,
-      list.findIndex((s) => s.id === this.focusableStencilId()),
-    );
-    const moves: Record<string, number> = {
-      ArrowRight: current + 1,
-      ArrowLeft: current - 1,
-      ArrowDown: current + columns,
-      ArrowUp: current - columns,
-      Home: 0,
-      End: list.length - 1,
-    };
-    const next = moves[event.key];
-    if (next === undefined) {
-      return;
-    }
-    event.preventDefault();
-    const target = list[Math.min(list.length - 1, Math.max(0, next))];
-    this.selectStencil(target.id);
-    this.scrollToStencil(target.id, true);
-  }
-
   protected onTabKey(event: KeyboardEvent): void {
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
@@ -539,7 +530,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
   }
 
   protected iconLabel(icon: BadgeIcon): string {
-    const t = this.t();
+    const t = this.labels();
     return {
       none: t.iconNone,
       check: t.iconCheck,
@@ -550,7 +541,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
   }
 
   protected ringStyleLabel(style: CustomFrameState['ringStyle']): string {
-    const t = this.t();
+    const t = this.labels();
     return { solid: t.styleSolid, gradient: t.styleGradient, segments: t.styleSegments }[style];
   }
 
@@ -562,20 +553,30 @@ export class FaceFrameEditorComponent implements OnDestroy {
     return format === 'image/jpeg' ? 'JPG' : 'PNG';
   }
 
-  protected text(event: Event): string {
+  protected inputValue(event: Event): string {
     return (event.target as HTMLInputElement | HTMLSelectElement).value;
   }
 
-  protected number(event: Event): number {
+  protected inputNumber(event: Event): number {
     return Number((event.target as HTMLInputElement).value);
   }
 
-  protected checked(event: Event): boolean {
+  protected inputChecked(event: Event): boolean {
     return (event.target as HTMLInputElement).checked;
   }
 
+  // A press goes to the first part that takes it: sticker, badge, text, otherwise the photo.
+
   protected onPointerDown(event: PointerEvent): void {
     if (!this.hasImage() || !event.isPrimary || event.button !== 0) {
+      return;
+    }
+    const canvas = event.currentTarget as HTMLElement;
+    if (
+      (this.features().stickers && this.stickers.gestures.pointerDown(event, canvas)) ||
+      (this.features().badgeMove && this.badge.gestures.pointerDown(event, canvas)) ||
+      (this.texts.movable() && this.texts.gestures.pointerDown(event, canvas))
+    ) {
       return;
     }
     (event.target as HTMLElement).setPointerCapture(event.pointerId);
@@ -589,7 +590,15 @@ export class FaceFrameEditorComponent implements OnDestroy {
   }
 
   protected onPointerMove(event: PointerEvent): void {
-    if (!this.drag || this.drag.pointerId !== event.pointerId) {
+    const target = event.currentTarget as HTMLElement;
+    if (
+      this.stickerStep(event, () => this.stickers.gestures.pointerMove(event, target)) ||
+      this.badge.gestures.pointerMove(event, target) ||
+      this.texts.gestures.pointerMove(event, target)
+    ) {
+      return;
+    }
+    if (this.drag?.pointerId !== event.pointerId) {
       return;
     }
     // offsets are relative to the photo circle diameter
@@ -603,9 +612,28 @@ export class FaceFrameEditorComponent implements OnDestroy {
   }
 
   protected onPointerUp(event: PointerEvent): void {
+    const target = event.currentTarget as HTMLElement;
+    if (
+      this.stickerStep(event, () => this.stickers.gestures.pointerUp(event, target)) ||
+      this.badge.gestures.pointerUp(event, target) ||
+      this.texts.gestures.pointerUp(event, target)
+    ) {
+      return;
+    }
     if (this.drag?.pointerId === event.pointerId) {
       this.drag = null;
       this.dragging.set(false);
+    }
+  }
+
+  /** pointercancel / lostpointercapture: a sticker, badge or text drag is dropped, a photo drag ends */
+  protected onPointerCancel(event: PointerEvent): void {
+    if (
+      !this.stickers.gestures.cancel(event.pointerId) &&
+      !this.badge.gestures.cancel(event.pointerId) &&
+      !this.texts.gestures.cancel(event.pointerId)
+    ) {
+      this.onPointerUp(event);
     }
   }
 
@@ -618,6 +646,13 @@ export class FaceFrameEditorComponent implements OnDestroy {
   }
 
   protected onKey(event: KeyboardEvent): void {
+    if (
+      this.badge.gestures.keyDown(event) ||
+      this.texts.gestures.keyDown(event) ||
+      (this.features().stickers && this.stickers.gestures.keyDown(event))
+    ) {
+      return;
+    }
     const step = event.shiftKey ? 0.05 : 0.01;
     const p = this.photo();
     const moves: Record<string, Partial<PhotoTransform>> = {
@@ -636,8 +671,95 @@ export class FaceFrameEditorComponent implements OnDestroy {
     }
   }
 
+  /** A sticker gesture that is still running after the feature was switched off is dropped. */
+  private stickerStep(event: PointerEvent, step: () => boolean): boolean {
+    return this.features().stickers ? step() : this.stickers.gestures.cancel(event.pointerId);
+  }
+
+  private claimSelection(part: Selectable): void {
+    if (part !== 'sticker') {
+      this.stickers.deselect();
+    }
+    if (part !== 'badge') {
+      this.badge.deselect();
+    }
+    if (part !== 'text') {
+      this.texts.deselect();
+    }
+  }
+
+  private paintPreview(
+    canvas: HTMLCanvasElement,
+    cssSize: number,
+    overlay: HTMLImageElement | null,
+  ): void {
+    const size = Math.round(cssSize * Math.min(3, window.devicePixelRatio || 1));
+    // check both: a new canvas is 300x150, so the width alone can already match
+    if (canvas.width !== size || canvas.height !== size) {
+      canvas.width = size;
+      canvas.height = size;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+    const textDraft = this.texts.draft();
+    const config = textDraft
+      ? this.badge.applyTo(withTextAt(this.textsPlaced(), textDraft.index, textDraft.center))
+      : this.config();
+    const badgeDraft = this.badge.draft();
+    const shown = badgeDraft === null ? config : withBadgeAt(config, badgeDraft);
+    renderFrame(ctx, size, shown, this.image(), this.photo(), undefined, overlay);
+    const stickerDraft = this.stickers.draft();
+    drawStickers(
+      ctx,
+      size,
+      withDraft(this.stickers.list(), stickerDraft),
+      this.stickers.loadedImages(),
+    );
+    this.paintSelection(canvas, ctx, size, shown, stickerDraft);
+  }
+
+  /** preview only, never exported */
+  private paintSelection(
+    canvas: HTMLCanvasElement,
+    ctx: CanvasRenderingContext2D,
+    size: number,
+    shown: FrameConfig,
+    stickerDraft: Sticker | null,
+  ): void {
+    const sticker = this.stickers.selected();
+    const badge = this.badge.selected() && isRoundBadge(shown) ? shown.badge : null;
+    const text = this.texts.selected();
+    if (!sticker && !badge && text === null) {
+      return;
+    }
+    // read once: getComputedStyle on every drag frame is not needed for a theme color
+    this.selectionColor ??=
+      getComputedStyle(canvas).getPropertyValue('--ff-primary').trim() || SELECTION_COLOR;
+    if (sticker) {
+      drawSelection(ctx, size, stickerDraft ?? sticker, this.selectionColor);
+    }
+    if (badge) {
+      const { x, y, r, gapWidth } = bubblePlacement(
+        geometry(size, shown),
+        badge,
+        solidRingColor(shown.ring),
+      );
+      drawCircleSelection(ctx, size, { x, y, r: r + gapWidth }, this.selectionColor);
+    }
+    const measure = text === null ? null : this.measure.ctx();
+    if (text !== null && measure && shown.texts[text]) {
+      const { center, half } = textArc(measure, shown, text);
+      drawArcSelection(ctx, size, geometry(size, shown), center, half, this.selectionColor);
+    }
+  }
+
   private update(change: Partial<FaceFrameState>): void {
-    const next = { ...this.current(), ...change };
+    this.replaceState({ ...this.current(), ...change });
+  }
+
+  private replaceState(next: FaceFrameState): void {
     this.current.set(next);
     this.state.set(next);
   }
@@ -662,77 +784,6 @@ export class FaceFrameEditorComponent implements OnDestroy {
     return this.host.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
   }
 
-  private contrastLow(textColor: string): boolean {
-    const o = this.opts();
-    return (
-      o.features.contrastWarning &&
-      contrastRatio(textColor, ringBackground(this.custom(), o.palettes)) < o.minContrast
-    );
-  }
-
-  private renderThumbnails(
-    list: readonly Stencil[],
-    image: HTMLImageElement | null,
-    photo: PhotoTransform,
-    key: string,
-  ): void {
-    let index = 0;
-    const step = (): void => {
-      if (key !== this.thumbKey) {
-        return;
-      }
-      for (const s of list.slice(index, index + THUMB_BATCH)) {
-        const config = this.stencilConfig(s);
-        this.thumbCache.set(
-          s.id,
-          this.renderDataUrl(config, image, photo, THUMB_SIZE * 2, this.stencilImageFor(config)),
-        );
-      }
-      index += THUMB_BATCH;
-      this.thumbnails.set(this.thumbnailRecord());
-      if (index < list.length) {
-        requestAnimationFrame(step);
-      }
-    };
-    if (list.length) {
-      step();
-    } else if (Object.keys(untracked(this.thumbnails)).length !== this.thumbCache.size) {
-      this.thumbnails.set(this.thumbnailRecord());
-    }
-  }
-
-  // null until the image is loaded
-  private stencilImageFor(config: FrameConfig): HTMLImageElement | null {
-    if (!config.image) {
-      return null;
-    }
-    this.requestStencilImage(config.image);
-    return this.stencilImages().get(config.image) ?? null;
-  }
-
-  private requestStencilImage(url: string): void {
-    if (this.requestedImages.has(url)) {
-      return;
-    }
-    this.requestedImages.add(url);
-    loadStencilImage(url).then(
-      (img) => this.stencilImages.update((images) => new Map(images).set(url, img)),
-      (cause) => {
-        this.requestedImages.delete(url);
-        this.frameError.emit({ key: 'STENCIL_LOAD_FAILED', cause });
-      },
-    );
-  }
-
-  private thumbnailRecord(): Record<string, string> {
-    // no prototype: ids are used as keys
-    const result = Object.create(null) as Record<string, string>;
-    this.thumbCache.forEach((value, key) => {
-      result[key] = value;
-    });
-    return result;
-  }
-
   private scrollToStencil(id: string, focus: boolean): void {
     requestAnimationFrame(() => {
       const el = this.findById(`st-${id}`);
@@ -743,7 +794,15 @@ export class FaceFrameEditorComponent implements OnDestroy {
     });
   }
 
-  // one export at a time, re-run once if the design changed in between
+  private contrastLow(textColor: string): boolean {
+    const o = this.opts();
+    return (
+      o.features.contrastWarning &&
+      contrastRatio(textColor, ringBackground(this.custom(), o.palettes)) < o.minContrast
+    );
+  }
+
+  // one export at a time, run once more if the design changed in between
   private queueFramedChange(): void {
     if (this.exporting) {
       this.exportAgain = true;
@@ -766,12 +825,31 @@ export class FaceFrameEditorComponent implements OnDestroy {
     })();
   }
 
-  private renderDataUrl(
+  /** The chat preview drawn again without a design change (a sticker image has arrived). */
+  private refreshSmallPreview(): void {
+    const config = this.config();
+    if (this.waitingForManifest()) {
+      return;
+    }
+    this.smallPreview.set(
+      this.dataUrl(
+        config,
+        this.image(),
+        this.photo(),
+        SMALL_PREVIEW_SIZE,
+        this.stencilImages.imageFor(config),
+        this.stickers.list(),
+      ),
+    );
+  }
+
+  private dataUrl(
     config: FrameConfig,
     image: HTMLImageElement | null,
     photo: PhotoTransform,
     size: number,
     overlay: HTMLImageElement | null,
+    stickers: readonly Sticker[] = NO_STICKERS,
   ): string {
     const canvas = document.createElement('canvas');
     canvas.width = size;
@@ -781,10 +859,11 @@ export class FaceFrameEditorComponent implements OnDestroy {
       return '';
     }
     renderFrame(ctx, size, config, image, photo, undefined, overlay);
+    drawStickers(ctx, size, stickers, untracked(this.stickers.loadedImages));
     try {
       return canvas.toDataURL('image/png');
     } catch (cause) {
-      // tainted canvas, e.g. stencil image without CORS; reported once, not on every render
+      // tainted canvas, e.g. a stencil image without CORS; reported once, not on every render
       if (!this.taintReported) {
         this.taintReported = true;
         this.frameError.emit({ key: 'STENCIL_LOAD_FAILED', cause });
@@ -817,19 +896,4 @@ export class FaceFrameEditorComponent implements OnDestroy {
       this.objectUrl = null;
     }
   }
-}
-
-function searchText(s: Stencil, translate: (text: string) => string): string {
-  const c = s.config;
-  const badge = c.badge
-    ? [...c.badge.lines, c.badge.shape === 'diagonal' ? c.badge.title : '']
-    : [];
-  const words = [
-    s.label,
-    s.category ?? '',
-    ...(s.tags ?? []),
-    ...c.texts.map((t) => t.text),
-    ...badge,
-  ];
-  return [...words, ...words.map(translate)].join(' ').toLowerCase();
 }

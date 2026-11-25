@@ -36,6 +36,29 @@ export interface FrameLabels {
   readonly badgeColor: string;
   readonly badgeTextColor: string;
   readonly badgeIcon: string;
+  readonly badgeSize: string;
+  readonly badgePosition: string;
+  readonly moveBadge: string;
+  readonly resetBadgePosition: string;
+  readonly badgeHint: string;
+  readonly badgeSelected: string;
+  readonly textPosition: string;
+  readonly noStencils: string;
+  readonly stencilsLoading: string;
+  readonly moveTopText: string;
+  readonly moveBottomText: string;
+  readonly resetTextPositions: string;
+  readonly textHint: string;
+  readonly textSelected: string;
+  readonly stickers: string;
+  readonly addSticker: string;
+  readonly stickerList: string;
+  readonly stickerItem: string;
+  readonly removeSticker: string;
+  readonly stickerHint: string;
+  readonly stickerSelected: string;
+  readonly stickerLimit: string;
+  readonly stickerRemoved: string;
   readonly resetFrame: string;
   readonly preview: string;
   readonly previewHint: string;
@@ -117,6 +140,31 @@ export const DEFAULT_LABELS: FrameLabels = deepFreeze({
   badgeColor: 'Badge colour',
   badgeTextColor: 'Badge text colour',
   badgeIcon: 'Icon',
+  badgeSize: 'Badge size',
+  badgePosition: 'Badge position',
+  moveBadge: 'Move badge',
+  resetBadgePosition: 'Reset position',
+  badgeHint: 'Drag the badge, or select it and use the arrow keys (Shift for bigger steps).',
+  badgeSelected: 'Badge selected. The arrow keys move it, Escape ends.',
+  textPosition: 'Text position',
+  noStencils: 'No premade stencils available.',
+  stencilsLoading: 'Loading premade stencils…',
+  moveTopText: 'Move top text',
+  moveBottomText: 'Move bottom text',
+  resetTextPositions: 'Reset positions',
+  textHint: 'Drag a text along the ring, or select it and use the left and right arrow keys.',
+  textSelected:
+    '{text} selected. The left and right arrow keys move it along the ring, Escape ends.',
+  stickers: 'Stickers',
+  addSticker: 'Add sticker',
+  stickerList: 'Stickers on the photo',
+  stickerItem: 'Sticker {n}',
+  removeSticker: 'Remove',
+  stickerHint:
+    'Drag to move · Corner: size · Round handle: rotate · Keys: arrows, + / −, R, Delete',
+  stickerSelected: 'Sticker {n} selected',
+  stickerLimit: 'Up to {max} stickers',
+  stickerRemoved: 'Sticker removed',
   resetFrame: 'Reset frame',
   preview: 'Framed photo preview',
   previewHint: 'Preview of your framed profile photo',

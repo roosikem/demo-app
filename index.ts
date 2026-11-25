@@ -1,4 +1,3 @@
-// Public API
 export { FaceFrameEditorComponent } from './editor/face-frame-editor.component';
 export { ColorPickerComponent } from './color-picker/color-picker.component';
 export {
@@ -9,18 +8,20 @@ export {
 } from './config/face-frame-options';
 export type {
   FaceFrameError,
+  BadgeMovement,
   FaceFrameFeatures,
   FaceFrameOptions,
   FaceFrameOptionsInput,
 } from './config/face-frame-options';
 export { initialFaceFrameState, sanitizeFaceFrameState } from './config/face-frame-state';
-export type { FaceFrameState } from './config/face-frame-state';
+export type { FaceFrameState, StencilBadgePosition } from './config/face-frame-state';
+export type { Sticker } from './stickers/sticker.model';
 export { COLOR_NAMES } from './stencils/colors';
 export { DEFAULT_CUSTOM_STATE, buildCustomFrame } from './rendering/custom-frame';
 export type { CustomFrameState } from './rendering/custom-frame';
 export { DEFAULT_LABELS } from './config/frame-labels';
 export type { FrameLabels } from './config/frame-labels';
-export { FONTS, PALETTES, STENCILS, SWATCHES, TEXT_SWATCHES } from './stencils/stencils';
+export { FONTS, PALETTES, SWATCHES, TEXT_SWATCHES } from './stencils/stencils';
 export { imageStencils } from './stencils/image-stencils';
 export { parseStencilManifest } from './config/stencil-manifest';
 export type { Palette } from './stencils/stencils';

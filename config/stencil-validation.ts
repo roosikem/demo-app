@@ -11,11 +11,10 @@ import {
   Stencil,
 } from '../models/frame.model';
 import { deepFreeze } from '../models/freeze';
-import { clamp } from '../rendering/custom-frame';
+import { BADGE_SIZE } from '../rendering/custom-frame';
+import { clamp } from '../models/numbers';
+import { SAFE_ID } from '../models/ids';
 
-export { deepFreeze };
-
-const SAFE_ID = /^[A-Za-z0-9][\w-]{0,63}$/;
 const RESERVED_IDS = ['constructor', 'prototype', 'hasOwnProperty', 'toString', 'valueOf'];
 const ICONS: readonly BadgeIcon[] = ['none', 'check', 'star', 'heart', 'cloud'];
 const BUBBLE_STYLES: readonly BubbleStyle[] = ['floating', 'joined', 'flush'];
@@ -24,6 +23,8 @@ const IMAGE_EXTENSIONS = /\.png$/i;
 const MAX_TEXTS = 4;
 const MAX_DECORATIONS = 24;
 const MAX_COLORS = 12;
+
+// Checks stencils from the app or from stencils.json. A broken stencil is left out instead of breaking the editor.
 
 export interface StencilImagePolicy {
   /** https hosts besides the own origin */
@@ -196,16 +197,40 @@ function sanitizeBadge(input: unknown): Badge | null {
       BUBBLE_STYLES.indexOf(input['style'] as BubbleStyle) >= 0
         ? (input['style'] as BubbleStyle)
         : undefined;
-    return { shape: 'bubble', color, textColor, lines, angle: angle(input['angle']), icon, style };
+    return {
+      shape: 'bubble',
+      color,
+      textColor,
+      lines,
+      angle: angle(input['angle']),
+      icon,
+      style,
+      ...badgeScale(input['scale']),
+    };
   }
   if (input['shape'] === 'diagonal') {
     const titleColors = Array.isArray(input['titleColors'])
       ? hexList(input['titleColors'])
       : undefined;
     const title = typeof input['title'] === 'string' ? input['title'].slice(0, 6) : '';
-    return { shape: 'diagonal', color, textColor, title, titleColors, lines };
+    return {
+      shape: 'diagonal',
+      color,
+      textColor,
+      title,
+      titleColors,
+      lines,
+      ...badgeScale(input['scale']),
+    };
   }
   return null;
+}
+
+/** Same range as the badge size control; no key at all when not set, so other badges stay unchanged. */
+function badgeScale(value: unknown): { scale?: number } {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? { scale: clamp(value, BADGE_SIZE.min / 100, BADGE_SIZE.max / 100) }
+    : {};
 }
 
 function sanitizeDecoration(input: unknown): Decoration | null {

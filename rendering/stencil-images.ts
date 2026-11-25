@@ -1,7 +1,12 @@
+// Loads the images of image stencils and image stickers, with a timeout.
+
 const LOAD_TIMEOUT_MS = 10000;
 const cache = new Map<string, Promise<HTMLImageElement>>();
 
-/** Cached per URL. The URL must pass isAllowedStencilImage() first. */
+/**
+ * Cached per URL. Only for checked URLs: stencil images that passed isAllowedStencilImage(), or sticker images from
+ * the same-origin stencils.json.
+ */
 export function loadStencilImage(url: string): Promise<HTMLImageElement> {
   let pending = cache.get(url);
   if (!pending) {

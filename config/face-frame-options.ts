@@ -4,17 +4,18 @@ import {
   CustomFrameState,
   DEFAULT_CUSTOM_STATE,
   TEXT_MAX_LENGTH,
-  clamp,
+  normalizeBadgeSize,
 } from '../rendering/custom-frame';
+import { clamp } from '../models/numbers';
 import { DEFAULT_LABELS, FrameLabels } from './frame-labels';
 import { BadgeIcon, ExportFormat, Stencil } from '../models/frame.model';
 import { COLOR_NAMES } from '../stencils/colors';
-import { FONTS, PALETTES, Palette, STENCILS, SWATCHES, TEXT_SWATCHES } from '../stencils/stencils';
-import { STENCIL_LIBRARY } from '../stencils/stencil-library';
+import { FONTS, PALETTES, Palette, SWATCHES, TEXT_SWATCHES } from '../stencils/stencils';
 import { deepFreeze } from '../models/freeze';
+import { DEFAULT_STICKER_EMOJIS } from '../stickers/sticker.model';
 import { normalizeImageHost, sanitizeStencils } from './stencil-validation';
 
-// Merge order: DEFAULT_FACE_FRAME_OPTIONS < provideFaceFrame() < [options] input
+// Merge order: DEFAULT_FACE_FRAME_OPTIONS < provideFaceFrame() < [options] input < server settings (settingsUrl)
 
 export interface FaceFrameFeatures {
   readonly customTab: boolean;
@@ -28,6 +29,20 @@ export interface FaceFrameFeatures {
   readonly stencilSearch: boolean;
   readonly stencilCategories: boolean;
   readonly stencilDropdown: boolean;
+  /** Stickers placed freely on the photo; off by default. */
+  readonly stickers: boolean;
+  /** Round badges can be moved on the frame (drag, or arrow keys once selected); on by default. */
+  readonly badgeMove: boolean;
+  /** The texts of the customized circle can be moved along the ring, never onto each other; on by default. */
+  readonly textMove: boolean;
+}
+
+/** Limits for a moved round badge (features.badgeMove). */
+export interface BadgeMovement {
+  /** the whole badge stays inside the round frame; default true */
+  readonly restrictInsideFrame: boolean;
+  /** the badge cannot cover a text or symbol on the ring; default false (left to the user) */
+  readonly restrictOnText: boolean;
 }
 
 export interface FaceFrameOptions {
@@ -56,11 +71,12 @@ export interface FaceFrameOptions {
   readonly textMaxLength: number;
   readonly badgeLineMaxLength: number;
   readonly features: FaceFrameFeatures;
+  readonly badgeMovement: BadgeMovement;
   /** Translates stencil names, categories and palette names, e.g. key => translate.instant(key). */
   readonly translate: (text: string) => string;
   /** Also translate the texts drawn on the stencils. */
   readonly translateStencilTexts: boolean;
-  /** Accessible names of the swatch colours (hex -> name), passed through translate. */
+  /** Accessible names of the swatch colors (hex -> name), passed through translate. */
   readonly colorNames: Readonly<Record<string, string>>;
   /** https hosts for stencil images besides the own origin */
   readonly imageHosts: readonly string[];
@@ -70,24 +86,40 @@ export interface FaceFrameOptions {
    * Same origin only; null = no manifest.
    */
   readonly stencilManifest: string | null;
+  /**
+   * URL of face-frame-settings.json (editor settings from the server, e.g.
+   * '/api/face-frame/stencils/face-frame-settings.json'). They win over the app's options; a missing or wrong
+   * setting keeps the app's value. Same origin only; null = no server settings.
+   */
+  readonly settingsUrl: string | null;
+  /**
+   * true: a server setting that cannot be used, or a settings file that cannot be loaded, silently keeps the
+   * app's / built-in value. false (to check a settings file): each one is reported through frameError
+   * (SETTINGS_INVALID / SETTINGS_FAILED) and the console; the value used is the same.
+   */
+  readonly settingsFallback: boolean;
+  /** Emojis offered as stickers (features.stickers); saved stickers with other emojis are dropped. */
+  readonly stickerEmojis: readonly string[];
 }
 
 export type FaceFrameOptionsInput = Partial<
-  Omit<FaceFrameOptions, 'zoom' | 'export' | 'download' | 'features'>
+  Omit<FaceFrameOptions, 'zoom' | 'export' | 'download' | 'features' | 'badgeMovement'>
 > & {
   readonly zoom?: Partial<FaceFrameOptions['zoom']>;
   readonly export?: Partial<FaceFrameOptions['export']>;
   readonly download?: Partial<FaceFrameOptions['download']>;
   readonly features?: Partial<FaceFrameFeatures>;
+  readonly badgeMovement?: Partial<BadgeMovement>;
 };
 
 export const MIN_EXPORT_SIZE = 32;
 export const MAX_EXPORT_SIZE = 4096;
 const DEFAULT_FILE_NAME = 'profile-photo';
-const SAFE_FILE_NAME = /^[\w.-]{1,64}$/;
+export const SAFE_FILE_NAME = /^[\w.-]{1,64}$/;
 
 export const DEFAULT_FACE_FRAME_OPTIONS: FaceFrameOptions = deepFreeze({
-  stencils: sanitizeStencils([...STENCILS, ...STENCIL_LIBRARY], { imageHosts: [] }),
+  // premade stencils come from the server (stencilManifest); an app can add its own here
+  stencils: [],
   palettes: PALETTES,
   swatches: SWATCHES,
   textSwatches: TEXT_SWATCHES,
@@ -115,12 +147,19 @@ export const DEFAULT_FACE_FRAME_OPTIONS: FaceFrameOptions = deepFreeze({
     stencilSearch: true,
     stencilCategories: true,
     stencilDropdown: true,
+    stickers: false,
+    badgeMove: true,
+    textMove: true,
   },
+  badgeMovement: { restrictInsideFrame: true, restrictOnText: false },
   translate: (text) => text,
   translateStencilTexts: false,
   colorNames: COLOR_NAMES,
   imageHosts: [],
   stencilManifest: null,
+  settingsUrl: null,
+  settingsFallback: true,
+  stickerEmojis: DEFAULT_STICKER_EMOJIS,
 });
 
 export const FACE_FRAME_OPTIONS = new InjectionToken<FaceFrameOptionsInput>('FACE_FRAME_OPTIONS');
@@ -142,6 +181,7 @@ export function mergeFaceFrameOptions(
       export: exportOptions,
       download,
       features,
+      badgeMovement,
       labels,
       colorNames,
       ...rest
@@ -153,6 +193,7 @@ export function mergeFaceFrameOptions(
       export: { ...acc.export, ...defined(exportOptions) },
       download: { ...acc.download, ...defined(download) },
       features: { ...acc.features, ...defined(features) },
+      badgeMovement: { ...acc.badgeMovement, ...defined(badgeMovement) },
       labels: { ...acc.labels, ...defined(labels) },
       colorNames: { ...acc.colorNames, ...defined(colorNames) } as FaceFrameOptions['colorNames'],
     };
@@ -168,10 +209,17 @@ export function mergeFaceFrameOptions(
     textSwatches: [...merged.textSwatches],
     fonts: [...merged.fonts],
     badgeIcons: [...merged.badgeIcons],
-    defaultCustom: { ...merged.defaultCustom },
+    defaultCustom: mergeDefaultCustom(merged.defaultCustom),
     imageHosts,
     stencilManifest: typeof merged.stencilManifest === 'string' ? merged.stencilManifest : null,
+    settingsUrl: typeof merged.settingsUrl === 'string' ? merged.settingsUrl : null,
+    settingsFallback: merged.settingsFallback !== false,
     stencils: sanitizeStencils(merged.stencils, { imageHosts }),
+    stickerEmojis: sanitizeEmojis(merged.stickerEmojis),
+    badgeMovement: {
+      restrictInsideFrame: merged.badgeMovement.restrictInsideFrame !== false,
+      restrictOnText: merged.badgeMovement.restrictOnText === true,
+    },
     export: { ...merged.export, size: clamp(merged.export.size, MIN_EXPORT_SIZE, MAX_EXPORT_SIZE) },
     download: {
       ...merged.download,
@@ -190,8 +238,30 @@ export interface FaceFrameError {
     | 'EXPORT_FAILED'
     | 'DOWNLOAD_FAILED'
     | 'STENCIL_LOAD_FAILED'
-    | 'STENCIL_MANIFEST_FAILED';
+    | 'STENCIL_MANIFEST_FAILED'
+    | 'SETTINGS_FAILED'
+    | 'SETTINGS_INVALID';
   readonly cause: unknown;
+}
+
+/** An app's defaultCustom may predate newer fields (e.g. badgeSize): those keep the built-in defaults. */
+function mergeDefaultCustom(custom: CustomFrameState): CustomFrameState {
+  const merged = { ...DEFAULT_CUSTOM_STATE, ...defined(custom) };
+  return { ...merged, badgeSize: normalizeBadgeSize(merged.badgeSize) };
+}
+
+const MAX_STICKER_EMOJIS = 32;
+const MAX_EMOJI_LENGTH = 16;
+
+export function sanitizeEmojis(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [...DEFAULT_STICKER_EMOJIS];
+  }
+  const emojis = value
+    .filter((e): e is string => typeof e === 'string' && e.trim().length > 0)
+    .map((e) => e.trim())
+    .filter((e) => e.length <= MAX_EMOJI_LENGTH);
+  return [...new Set(emojis)].slice(0, MAX_STICKER_EMOJIS);
 }
 
 type Defined<T> = { [K in keyof T]?: Exclude<T[K], undefined> };

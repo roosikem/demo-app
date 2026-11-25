@@ -5,95 +5,46 @@ user's photo, so a new stencil needs no new code. This guide describes the forma
 
 ## Where to add
 
-| Case | File |
-|---|---|
-| Stencil shipped with the face-frame module | `stencils/stencils.ts` (`STENCILS`) or `stencils/stencil-library.ts` (`STENCIL_LIBRARY`) |
-| Company / page specific stencils (recommended) | a file in the app, e.g. `src/app/photo/company-stencils.ts`, passed in via `frameOptions.stencils` or `provideFaceFrame({ stencils })` |
-| **Premade image stencil (recommended for artwork)** | only the image file in `src/assets/face-frame/stencils/` – no code, see "Premade stencils from the assets folder" |
-| Image stencil with texts from code | image in `src/assets/face-frame/stencils/` + entry with `config.image` and `config.texts` (see `stencils/image-stencils.ts`) |
+The face-frame module ships **no premade stencils** (only the colours, palettes and fonts of the customized
+circle). Premade stencils come from:
 
-Passing stencils from the app keeps this folder unchanged, so it can be replaced by a newer version:
+| Case                                                | Where                                                                                                                                                                                                |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Premade image stencils (recommended)**            | the stencil zip on the server: images + `stencils.json`, see "Premade stencils from the server" – no code                                                                                            |
+| Image stencils in the app's assets                  | image files in `src/assets/face-frame/stencils/` + `stencils.json`, see "Premade stencils from the assets folder"                                                                                    |
+| Drawn stencils or image stencils with texts in code | a file in the app, e.g. `src/app/photo/company-stencils.ts`, passed in via `frameOptions.stencils` or `provideFaceFrame({ stencils })` (image stencils with texts: see `stencils/image-stencils.ts`) |
+
+Stencils from the app come first, the server's are added after them. Passing stencils from the app keeps this
+folder unchanged, so it can be replaced by a newer version:
 
 ```ts
-import {DEFAULT_FACE_FRAME_OPTIONS, Stencil} from 'app/face-frame';
+import { Stencil } from 'app/face-frame';
 
-export const COMPANY_STENCILS: Stencil[] = [ /* entries */ ];
+export const COMPANY_STENCILS: Stencil[] = [/* entries */];
 
-frameOptions: FaceFrameOptionsInput = {
-  stencils: [...DEFAULT_FACE_FRAME_OPTIONS.stencils, ...COMPANY_STENCILS], // or only COMPANY_STENCILS
-};
+frameOptions: FaceFrameOptionsInput = { stencils: COMPANY_STENCILS };
 ```
 
 ## Choosing which stencils are shown
 
-The editor shows exactly the list in `options.stencils`. Build that list in the app instead of editing this
-folder; the built-in stencils stay available for later.
-
-**Only selected stencils (by id):**
-
-```ts
-import {DEFAULT_FACE_FRAME_OPTIONS, FaceFrameOptionsInput, Stencil} from 'app/face-frame';
-
-const SELECTED_IDS = ['classic', 'ambassador-classic', 'confetti', 'team-lead'];
-
-// keeps the order of SELECTED_IDS; unknown ids are ignored
-const selected: Stencil[] = SELECTED_IDS
-  .map(id => DEFAULT_FACE_FRAME_OPTIONS.stencils.find(s => s.id === id))
-  .filter((s): s is Stencil => !!s);
-
-frameOptions: FaceFrameOptionsInput = {stencils: selected};
-```
-
-**Only some categories:**
-
-```ts
-const CATEGORIES = ['Classic', 'Team & Roles'];
-frameOptions: FaceFrameOptionsInput = {
-  stencils: DEFAULT_FACE_FRAME_OPTIONS.stencils.filter(s => CATEGORIES.indexOf(s.category ?? '') >= 0),
-};
-```
-
-**All except some:**
-
-```ts
-const HIDDEN_IDS = ['council', 'certified'];
-frameOptions: FaceFrameOptionsInput = {
-  stencils: DEFAULT_FACE_FRAME_OPTIONS.stencils.filter(s => HIDDEN_IDS.indexOf(s.id) < 0),
-};
-```
-
-**Selected built-in stencils plus own ones:**
-
-```ts
-frameOptions: FaceFrameOptionsInput = {stencils: [...selected, ...COMPANY_STENCILS]};
-```
-
-**Only own stencils:** `frameOptions = {stencils: COMPANY_STENCILS}`.
-
-**No premade stencils at all:** hide the tab, only "Customized circle" stays:
-
-```ts
-frameOptions: FaceFrameOptionsInput = {features: {stencilsTab: false}};
-```
-
-For the whole app use the same list in `provideFaceFrame({stencils: ...})` (e.g. in `app.config.ts`);
-`[options]` on a page overrides it for that page.
+The editor shows the app's `options.stencils` followed by the stencils of `stencils.json`. Which server stencils
+exist is decided by the zip (add, remove or reorder entries in `stencils.json`).
 
 Notes:
+
 - The first stencil in the list is selected when the user opens the Premade stencils tab for the first time.
-- Categories, chips and the dropdown follow the list automatically; a category with no stencils disappears.
+- Without any stencil the tab shows "No premade stencils available." ("Loading premade stencils…" while
+  `stencils.json` loads); to hide the tab: `features: {stencilsTab: false}`.
+- Categories, chips and the dropdown follow the list automatically (the chips "All" + one per category show as soon
+  as one stencil has a category); a category with no stencils disappears.
 - Search, category chips and the dropdown can be switched off for short lists:
   `features: {stencilSearch: false, stencilCategories: false, stencilDropdown: false}`.
 
 ## Removing a stencil
 
-1. **From the shown list (recommended):** leave its id out of `SELECTED_IDS` or add it to `HIDDEN_IDS` (above).
-   No change in this folder.
-2. **From the module itself:** delete the entry in `stencils.ts` / `stencil-library.ts` and update the count in
-   `face-frame.spec.ts`; for an image stencil also delete its file in `assets/`.
-
-Either way, users who saved a design with that stencil get the default stencil next time (the saved state is
-validated against the current list). Do not reuse the removed id for a different design later.
+Remove its entry (and image) from the stencil zip, or from the app's list. Users who saved a design with that
+stencil get the first stencil of the list next time (photo position and stickers stay; with no stencils at all, the
+customized circle). Do not reuse the removed id for a different design later.
 
 ## Coordinates
 
@@ -134,8 +85,6 @@ validated against the current list). Do not reuse the removed id for a different
   },
 }
 ```
-
-In `stencil-library.ts` the helper `frame({...})` fills `photoClip: 'inner'` and `photoBackground: BG`.
 
 ## Rules
 
@@ -199,13 +148,16 @@ the environment variable `FACEFRAME_STENCILS_FILE_ID`). The server reads it once
 ```
 stencils.zip                 zip the contents of the folder, not the folder itself
 ├── stencils.json            exactly this name, at the top level
+├── face-frame-settings.json optional: editor settings (see demo-align/README.md, "Settings from the server")
 ├── laurel.png
-└── Celebration/             at most one subfolder level
-    └── star-ring.png
+├── Celebration/             at most one subfolder level
+│   └── star-ring.png
+└── stickers/                optional: image stickers (lower case, exactly this name)
+    └── heart.png
 ```
 
 Only PNG files and `stencils.json` are allowed in the zip (`__MACOSX/`, `.DS_Store`, `Thumbs.db` and `.gitkeep`
-are skipped). Limits: 200 stencils, 1 MB per file, 50 MB unpacked, 60 MB for the zip.
+are skipped). Limits: 200 stencils, 100 stickers, 1 MB per file, 50 MB unpacked, 60 MB for the zip.
 
 `stencils.json` is the master list and is required. Every PNG is listed exactly once, in the order shown:
 
@@ -213,27 +165,42 @@ are skipped). Limits: 200 stencils, 1 MB per file, 50 MB unpacked, 60 MB for the
 {
   "version": 1,
   "stencils": [
-    { "id": "img-celebration-star-ring", "file": "Celebration/star-ring.png", "label": "Star ring",
-      "category": "Celebration", "tags": ["stars"] }
-  ]
+    {
+      "id": "img-celebration-star-ring",
+      "file": "Celebration/star-ring.png",
+      "label": "Star ring",
+      "category": "Celebration",
+      "tags": ["stars"]
+    }
+  ],
+  "stickers": [{ "id": "heart", "file": "stickers/heart.png", "label": "Heart" }]
 }
 ```
 
-- `id`: starts with `img-` (keeps it apart from the built-in stencils), then letters, digits, `-`, `_`,
+- `id`: starts with `img-` (keeps it apart from stencils an app passes in code), then letters, digits, `-`, `_`,
   max. 64 characters, unique. It is stored in users' saved designs: keep it when an image is replaced or renamed.
 - `file`: path in the zip, case-sensitive.
 - `label` (max. 40 characters) and `category` (max. 30): required. `tags`: optional, max. 10 of 30 characters.
   Lengths count like JavaScript `length` (an emoji usually counts 2). No control characters, text direction
   marks or `<` `>`; emoji sequences and soft hyphens are fine.
 - Other fields are not passed on to the browser.
+- `stickers/` is reserved for stickers: an older zip that used it as a stencil category is now rejected; rename that
+  folder (e.g. `Stickers-stencils/`).
+- `stickers` (optional, only with images in `stickers/`): every image in `stickers/` is listed here, and only
+  there. `id`: letters, digits, `-`, `_`, max. 64 characters, unique among the stickers (no prefix); it is stored in
+  users' saved designs. `label`: max. 40 characters, read by screen readers and shown as tooltip. Sticker images:
+  square PNG, 128 to 1024 px (256 px is plenty), with transparency, max. 1 MB. They are offered next to the emojis
+  when the app enables `features.stickers`; `stickerEmojis: []` offers images only.
 
 The images follow the rules in "Image stencils" below. **One mistake rejects the whole zip** (missing or invalid
 `stencils.json`, an image without an entry, an entry without an image, a duplicate id, a bad image, ...): the
-server log shows the reason as SEVERE and the editor shows only the built-in stencils.
+server log shows the reason as SEVERE and the editor shows only the app's own stencils, if any (otherwise "No
+premade stencils available.").
 
 A first `stencils.json` can be written with `node scripts/face-frame-stencils.mjs <folder>`: it applies the same
 rules, so a folder it accepts is accepted by the server. It takes ids and labels from the names (file name max.
 40 characters for the label, folder name max. 30 for the category) and keeps edited label, category and tags.
+Images in `stickers/` become the `stickers` list (id and label from the file name, an edited label is kept).
 
 ## Image stencils
 

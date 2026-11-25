@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
+// Small inline SVG icons used by the editor buttons.
+
 export type FfIconName =
   | 'zoom-in'
   | 'zoom-out'

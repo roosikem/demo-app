@@ -286,3 +286,13 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+.ff-badge-position,
+.ff-text-position {
+  padding: 12px 0 0;
+}
+.ff-badge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+}

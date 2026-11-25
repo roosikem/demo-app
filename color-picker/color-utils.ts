@@ -1,3 +1,5 @@
+// Conversions between hex colors and HSV (hue, saturation, value) for the color picker.
+
 export interface Hsv {
   /** 0 .. 360 */
   readonly h: number;

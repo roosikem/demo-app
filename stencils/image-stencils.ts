@@ -1,7 +1,7 @@
 import { Stencil } from '../models/frame.model';
 import { BG, WHITE } from './colors';
 
-// Example image stencils: 1024x1024, transparent centre, frame inside a radius of 504 px.
+// Example image stencils: 1024x1024, transparent center, frame inside a radius of 504 px.
 // baseUrl e.g. 'assets/face-frame/stencils'
 export function imageStencils(baseUrl: string): Stencil[] {
   const url = (file: string): string => `${baseUrl.replace(/\/$/, '')}/${file}`;

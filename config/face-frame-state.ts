@@ -1,7 +1,18 @@
-import { BadgeIcon, DEFAULT_PHOTO, ExportFormat, PhotoTransform } from '../models/frame.model';
+import {
+  BadgeIcon,
+  BadgePosition,
+  DEFAULT_PHOTO,
+  ExportFormat,
+  PhotoTransform,
+} from '../models/frame.model';
 import { normalizeHex } from '../color-picker/color-utils';
-import { CustomFrameState, RING_WIDTH, clamp } from '../rendering/custom-frame';
+import { clamp, normalizeDegrees, round } from '../models/numbers';
+import { CustomFrameState, RING_WIDTH, normalizeBadgeSize } from '../rendering/custom-frame';
 import { FaceFrameOptions } from './face-frame-options';
+import { Sticker, sanitizeStickers } from '../stickers/sticker.model';
+
+// What the user designed (tab, stencil, customized circle, photo position, stickers). The app saves it and passes
+// it back; sanitizeFaceFrameState() checks a saved state before it is used.
 
 export interface FaceFrameState {
   readonly tab: 'custom' | 'stencils';
@@ -9,6 +20,14 @@ export interface FaceFrameState {
   readonly stencilId: string;
   readonly photo: PhotoTransform;
   readonly downloadFormat: ExportFormat;
+  /** Only used with features.stickers; missing = none. */
+  readonly stickers?: readonly Sticker[];
+  /** Moved round badge of a premade stencil (features.badgeMove); only for that stencil. */
+  readonly stencilBadge?: StencilBadgePosition;
+}
+
+export interface StencilBadgePosition extends BadgePosition {
+  readonly stencilId: string;
 }
 
 const RING_STYLES: readonly CustomFrameState['ringStyle'][] = ['solid', 'gradient', 'segments'];
@@ -19,14 +38,15 @@ export function initialFaceFrameState(o: FaceFrameOptions): FaceFrameState {
     tab: o.features.customTab || !o.features.stencilsTab ? 'custom' : 'stencils',
     custom: o.defaultCustom,
     stencilId: o.stencils[0]?.id ?? '',
-    photo: DEFAULT_PHOTO,
+    // within the zoom range of the options, which may start above 1
+    photo: sanitizePhoto(DEFAULT_PHOTO, o),
     downloadFormat: o.download.formats[0] ?? 'image/png',
   };
 }
 
 /**
  * Makes a state from outside (e.g. restored from storage) safe to use: unknown values fall back to the
- * defaults, colours must be hex, numbers are clamped and texts are cut to the allowed length.
+ * defaults, colors must be hex, numbers are clamped and texts are cut to the allowed length.
  */
 export function sanitizeFaceFrameState(
   input: Partial<FaceFrameState> | null | undefined,
@@ -46,6 +66,8 @@ export function sanitizeFaceFrameState(
     ),
     photo: sanitizePhoto(input.photo, o),
     downloadFormat: oneOf(input.downloadFormat, o.download.formats, defaults.downloadFormat),
+    ...stickers(input.stickers, o),
+    ...stencilBadge(input.stencilBadge, o),
   };
 }
 
@@ -95,7 +117,64 @@ function sanitizeCustom(
     badgeColor: color(c.badgeColor, d.badgeColor),
     badgeTextColor: color(c.badgeTextColor, d.badgeTextColor),
     badgeIcon: oneOf<BadgeIcon>(c.badgeIcon, o.badgeIcons, d.badgeIcon),
+    badgeSize: normalizeBadgeSize(c.badgeSize ?? d.badgeSize, normalizeBadgeSize(d.badgeSize)),
+    ...badgePosition(c.badgePosition),
+    ...textAngle('topTextAngle', c.topTextAngle),
+    ...textAngle('bottomTextAngle', c.bottomTextAngle),
   };
+}
+
+/** One decimal, 0 .. 360; the key is left out when the value is not a number. */
+function textAngle<K extends 'topTextAngle' | 'bottomTextAngle'>(
+  key: K,
+  value: unknown,
+): Partial<Record<K, number>> {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return {};
+  }
+  return { [key]: normalizeDegrees(round(normalizeDegrees(value), 1)) } as Partial<
+    Record<K, number>
+  >;
+}
+
+/** The key is left out when there is no valid position. */
+function badgePosition(value: unknown): { badgePosition?: BadgePosition } {
+  const position = sanitizeBadgePosition(value);
+  return position ? { badgePosition: position } : {};
+}
+
+/** The key is left out without stickers, so a state without the feature looks as before. */
+function stickers(value: unknown, o: FaceFrameOptions): { stickers?: readonly Sticker[] } {
+  const list = sanitizeStickers(value, o.stickerEmojis);
+  return list.length ? { stickers: list } : {};
+}
+
+/** Kept only for an existing stencil with a round badge. */
+function stencilBadge(
+  value: unknown,
+  o: FaceFrameOptions,
+): { stencilBadge?: StencilBadgePosition } {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+  const { stencilId } = value as Partial<StencilBadgePosition>;
+  const stencil = o.stencils.find((s) => s.id === stencilId);
+  const position = sanitizeBadgePosition(value);
+  return stencil?.config.badge?.shape === 'bubble' && position
+    ? { stencilBadge: { stencilId: stencil.id, ...position } }
+    : {};
+}
+
+/** Both coordinates must be numbers; kept on the frame (0 .. 1) with four decimals. */
+export function sanitizeBadgePosition(value: unknown): BadgePosition | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const { x, y } = value as Partial<BadgePosition>;
+  if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x + y)) {
+    return null;
+  }
+  return { x: round(clamp(x, 0, 1), 4), y: round(clamp(y, 0, 1), 4) };
 }
 
 function oneOf<T>(value: unknown, allowed: readonly T[], fallback: T): T {

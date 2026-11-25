@@ -41,12 +41,25 @@ export interface BubbleBadge {
   readonly icon?: BadgeIcon;
   /**
    * floating: separate circle with a gap; joined: touches the ring with rounded joins; flush: touches the outer
-   * edge without joins. Default: joined when the badge has the ring colour, otherwise floating.
+   * edge without joins. Default: joined when the badge has the ring color, otherwise floating.
    */
   readonly style?: BubbleStyle;
+  /** Size factor, 1 = default size. */
+  readonly scale?: number;
+  /**
+   * Center of a badge the user has moved, 0 .. 1 of the frame size; drawn there instead of on the ring at `angle`.
+   * Away from the ring edge a joined or flush badge is drawn floating.
+   */
+  readonly at?: BadgePosition;
 }
 
 export type BubbleStyle = 'floating' | 'joined' | 'flush';
+
+/** Center of a moved badge, 0 .. 1 of the frame size from the left / top edge. */
+export interface BadgePosition {
+  readonly x: number;
+  readonly y: number;
+}
 
 export interface DiagonalBadge {
   readonly shape: 'diagonal';
@@ -55,6 +68,8 @@ export interface DiagonalBadge {
   readonly title: string;
   readonly titleColors?: readonly string[];
   readonly lines: readonly string[];
+  /** Width factor of the band, 1 = default width. */
+  readonly scale?: number;
 }
 
 export type Badge = BubbleBadge | DiagonalBadge;
@@ -74,7 +89,7 @@ export interface FrameConfig {
   readonly photoClip: 'inner' | 'outer';
   readonly photoBackground: string;
   /**
-   * URL of a square stencil image with a transparent centre (PNG only), drawn over the photo.
+   * URL of a square stencil image with a transparent center (PNG only), drawn over the photo.
    * Must be same-origin or served with CORS headers, otherwise the framed photo cannot be exported.
    */
   readonly image?: string;
