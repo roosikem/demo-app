@@ -28,8 +28,11 @@ import {
   FaceFrameError,
   FaceFrameOptions,
   FaceFrameOptionsInput,
+  MAX_EXPORT_SIZE,
+  MIN_EXPORT_SIZE,
   mergeFaceFrameOptions,
 } from '../config/face-frame-options';
+import { clamp } from '../models/numbers';
 import {
   FaceFrameState,
   initialFaceFrameState,
@@ -417,7 +420,8 @@ export class FaceFrameEditorComponent implements OnDestroy {
     const config = this.config();
     const photo = this.photo();
     const overlay = config.image ? await loadStencilImage(config.image) : null;
-    const outputSize = size ?? o.export.size;
+    const outputSize =
+      size === undefined ? o.export.size : clamp(size, MIN_EXPORT_SIZE, MAX_EXPORT_SIZE);
     const outputFormat = format ?? o.export.format;
     const stickers = this.stickers.list();
     if (!stickers.length) {

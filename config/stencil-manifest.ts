@@ -22,6 +22,7 @@ const SAFE_FILE = /^[a-z0-9][\w-]*(\/[a-z0-9][\w-]*)?\.png$/i;
 const STICKER_FOLDER = 'stickers/';
 const MAX_STICKER_LABEL = 40;
 const MANIFEST_PATH = /\.json$/i;
+const LOAD_TIMEOUT_MS = 10000;
 
 const cache = new Map<string, Promise<StencilManifest>>();
 
@@ -127,12 +128,20 @@ async function fetchManifest(url: string): Promise<StencilManifest> {
   if (parsed.origin !== location.origin || !MANIFEST_PATH.test(parsed.pathname)) {
     throw new Error(`stencil manifest must be a same-origin .json file: ${url}`);
   }
-  // no-cache: the browser revalidates, so a reload after a deployment gets the new list
-  const response = await fetch(parsed.href, {
-    credentials: 'same-origin',
-    cache: 'no-cache',
-    redirect: 'error',
-  });
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), LOAD_TIMEOUT_MS);
+  let response: Response;
+  try {
+    // no-cache: the browser revalidates, so a reload after a deployment gets the new list
+    response = await fetch(parsed.href, {
+      credentials: 'same-origin',
+      cache: 'no-cache',
+      redirect: 'error',
+      signal: abort.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!response.ok) {
     throw new Error(`stencil manifest ${url}: HTTP ${response.status}`);
   }
