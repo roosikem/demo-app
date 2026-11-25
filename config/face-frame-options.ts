@@ -268,7 +268,8 @@ type Defined<T> = { [K in keyof T]?: Exclude<T[K], undefined> };
 
 /** Drops undefined fields, so { size: undefined } keeps the default instead of overwriting it. */
 function defined<T extends object>(value: T | undefined): Defined<T> {
-  const result: Record<string, unknown> = {};
+  // no prototype: a key like "__proto__" stays a plain key
+  const result = Object.create(null) as Record<string, unknown>;
   if (value) {
     const source = value as Record<string, unknown>;
     for (const key of Object.keys(source)) {

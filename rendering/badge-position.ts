@@ -186,7 +186,8 @@ function offTheTexts(
     const turn = ((a - angle) * Math.PI) / 180;
     return d * d + distance * distance - 2 * d * distance * Math.cos(turn);
   };
-  return candidates.sort((p, q) => away(p) - away(q))[0] ?? [distance, angle];
+  candidates.sort((p, q) => away(p) - away(q));
+  return candidates[0] ?? [distance, angle];
 }
 
 /**

@@ -43,7 +43,7 @@ interface Gesture {
 const KEY_STEP = 1;
 const KEY_STEP_LARGE = 5;
 /** visual direction of a key: right = clockwise in the upper half, counter-clockwise in the lower half */
-const KEY_TURNS: Readonly<Record<string, number>> = {
+const KEY_TURNS: Readonly<Partial<Record<string, number>>> = {
   ArrowLeft: -1,
   ArrowRight: 1,
   ArrowUp: 0,
@@ -91,7 +91,7 @@ export class TextGestures {
 
   pointerMove(event: PointerEvent, target: HTMLElement): boolean {
     const g = this.gesture;
-    if (!g || g.pointerId !== event.pointerId) {
+    if (g?.pointerId !== event.pointerId) {
       return false;
     }
     const p = relativePoint(event, target);
@@ -110,7 +110,7 @@ export class TextGestures {
   }
 
   pointerUp(event: PointerEvent, target: HTMLElement): boolean {
-    if (!this.gesture || this.gesture.pointerId !== event.pointerId) {
+    if (this.gesture?.pointerId !== event.pointerId) {
       return false;
     }
     this.pointerMove(event, target);

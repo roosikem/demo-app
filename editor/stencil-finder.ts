@@ -115,7 +115,7 @@ export class StencilFinder {
       0,
       list.findIndex((s) => s.id === this.focusableId()),
     );
-    const moves: Readonly<Record<string, number>> = {
+    const moves: Readonly<Partial<Record<string, number>>> = {
       ArrowRight: current + 1,
       ArrowLeft: current - 1,
       ArrowDown: current + columns,

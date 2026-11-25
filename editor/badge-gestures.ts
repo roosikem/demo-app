@@ -73,7 +73,7 @@ export class BadgeGestures {
 
   pointerMove(event: PointerEvent, target: HTMLElement): boolean {
     const g = this.gesture;
-    if (!g || g.pointerId !== event.pointerId) {
+    if (g?.pointerId !== event.pointerId) {
       return false;
     }
     const p = relativePoint(event, target);
@@ -93,7 +93,7 @@ export class BadgeGestures {
   }
 
   pointerUp(event: PointerEvent, target: HTMLElement): boolean {
-    if (!this.gesture || this.gesture.pointerId !== event.pointerId) {
+    if (this.gesture?.pointerId !== event.pointerId) {
       return false;
     }
     this.pointerMove(event, target);

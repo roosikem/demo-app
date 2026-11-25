@@ -98,7 +98,7 @@ export function checkSettings(data: unknown): CheckedSettings {
         problems.push(`${key}: unknown setting`);
     }
   }
-  return { settings: settings as FaceFrameOptionsInput, problems };
+  return { settings, problems };
 }
 
 /**
@@ -154,7 +154,7 @@ function flags<T extends object>(
     if (!Object.prototype.hasOwnProperty.call(known, key)) {
       problems.push(`${name}.${key}: unknown setting`);
     } else if (typeof value[key] === 'boolean') {
-      result[key] = value[key] as boolean;
+      result[key] = value[key];
     } else {
       problems.push(`${name}.${key}: must be true or false`);
     }

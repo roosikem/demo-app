@@ -153,7 +153,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
   protected readonly features = computed(() => this.opts().features);
   protected readonly colorNames = computed(() => {
     const { colorNames, translate } = this.opts();
-    const translated: Record<string, string> = {};
+    const translated = Object.create(null) as Record<string, string>;
     for (const hex of Object.keys(colorNames)) {
       translated[hex] = translate(colorNames[hex]);
     }

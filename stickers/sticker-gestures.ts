@@ -65,7 +65,7 @@ export class StickerGestures {
 
   pointerMove(event: PointerEvent, target: HTMLElement): boolean {
     const g = this.gesture;
-    if (!g || g.pointerId !== event.pointerId) {
+    if (g?.pointerId !== event.pointerId) {
       return false;
     }
     this.host.preview(dragged(g, relativePoint(event, target), event.shiftKey));
@@ -74,7 +74,7 @@ export class StickerGestures {
 
   pointerUp(event: PointerEvent, target: HTMLElement): boolean {
     const g = this.gesture;
-    if (!g || g.pointerId !== event.pointerId) {
+    if (g?.pointerId !== event.pointerId) {
       return false;
     }
     const result = dragged(g, relativePoint(event, target), event.shiftKey);

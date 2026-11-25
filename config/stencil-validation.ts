@@ -52,7 +52,7 @@ export function sanitizeStencil(input: unknown, policy: StencilImagePolicy): Ste
   }
   const id = input['id'];
   const config = sanitizeConfig(input['config'], policy);
-  if (!SAFE_ID.test(id) || RESERVED_IDS.indexOf(id) >= 0 || !config) {
+  if (!SAFE_ID.test(id) || RESERVED_IDS.includes(id) || !config) {
     return null;
   }
   const category =
@@ -80,7 +80,7 @@ export function isAllowedStencilImage(url: string, policy: StencilImagePolicy): 
   if (base && parsed.origin === location.origin) {
     return true;
   }
-  return parsed.protocol === 'https:' && policy.imageHosts.indexOf(parsed.host) >= 0;
+  return parsed.protocol === 'https:' && policy.imageHosts.includes(parsed.host);
 }
 
 /** 'CDN.Example.com', 'cdn.example.com:443' -> 'cdn.example.com'; other ports are kept; invalid -> null */
@@ -191,12 +191,12 @@ function sanitizeBadge(input: unknown): Badge | null {
   const color = hex(input['color'], '#0b3d6e');
   const textColor = hex(input['textColor'], '#ffffff');
   if (input['shape'] === 'bubble') {
-    const icon =
-      ICONS.indexOf(input['icon'] as BadgeIcon) >= 0 ? (input['icon'] as BadgeIcon) : undefined;
-    const style =
-      BUBBLE_STYLES.indexOf(input['style'] as BubbleStyle) >= 0
-        ? (input['style'] as BubbleStyle)
-        : undefined;
+    const icon = ICONS.includes(input['icon'] as BadgeIcon)
+      ? (input['icon'] as BadgeIcon)
+      : undefined;
+    const style = BUBBLE_STYLES.includes(input['style'] as BubbleStyle)
+      ? (input['style'] as BubbleStyle)
+      : undefined;
     return {
       shape: 'bubble',
       color,
