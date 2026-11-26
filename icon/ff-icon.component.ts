@@ -13,7 +13,12 @@ export type FfIconName =
   | 'chevron'
   | 'check'
   | 'move'
+  | 'move-badge'
+  | 'move-top-text'
+  | 'move-bottom-text'
+  | 'reset-positions'
   | 'warn'
+  | 'info'
   | 'user'
   | 'plus';
 

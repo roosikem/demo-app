@@ -8,6 +8,7 @@ import {
   SAFE_FILE_NAME,
   sanitizeEmojis,
 } from './face-frame-options';
+import { fetchJson } from './json-fetch';
 import { resolveManifestUrl } from './stencil-manifest';
 
 // face-frame-settings.json, served next to stencils.json from the stencil zip, e.g.
@@ -30,6 +31,9 @@ const MAX_MIN_WINDOW_WIDTH = 1600;
 const LOAD_TIMEOUT_MS = 5000;
 
 const cache = new Map<string, Promise<unknown>>();
+const MAX_PROBLEMS = 20;
+/** unknown keys come from the file: shown cut to this length */
+const MAX_KEY_LENGTH = 40;
 
 /** Checks the settings from the server one by one. */
 export function checkSettings(data: unknown): CheckedSettings {
@@ -95,10 +99,14 @@ export function checkSettings(data: unknown): CheckedSettings {
         take(key, value, typeof value === 'boolean' ? null : 'must be true or false');
         break;
       default:
-        problems.push(`${key}: unknown setting`);
+        problems.push(`${key.slice(0, MAX_KEY_LENGTH)}: unknown setting`);
     }
   }
-  return { settings, problems };
+  // the list goes to the console and frameError: a file full of unknown keys must not flood them
+  return {
+    settings,
+    problems: problems.slice(0, MAX_PROBLEMS),
+  };
 }
 
 /**
@@ -117,26 +125,9 @@ export function loadSettings(url: string): Promise<unknown> {
 async function fetchSettings(url: string): Promise<unknown> {
   const parsed = resolveManifestUrl(url);
   if (parsed.origin !== location.origin || !JSON_PATH.test(parsed.pathname)) {
-    throw new Error(`settings must be a same-origin .json file: ${url}`);
+    throw new Error('settings must be a same-origin .json file');
   }
-  const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), LOAD_TIMEOUT_MS);
-  let response: Response;
-  try {
-    // no-cache: the browser revalidates, so changed settings apply after a reload
-    response = await fetch(parsed.href, {
-      credentials: 'same-origin',
-      cache: 'no-cache',
-      redirect: 'error',
-      signal: abort.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!response.ok) {
-    throw new Error(`settings ${url}: HTTP ${response.status}`);
-  }
-  return response.json();
+  return fetchJson(parsed.href, LOAD_TIMEOUT_MS, 'settings');
 }
 
 /** Known switches that are true or false; the others are left out and reported. */
@@ -152,7 +143,7 @@ function flags<T extends object>(
   const result: Record<string, boolean> = {};
   for (const key of Object.keys(value)) {
     if (!Object.prototype.hasOwnProperty.call(known, key)) {
-      problems.push(`${name}.${key}: unknown setting`);
+      problems.push(`${name}.${key.slice(0, MAX_KEY_LENGTH)}: unknown setting`);
     } else if (typeof value[key] === 'boolean') {
       result[key] = value[key];
     } else {

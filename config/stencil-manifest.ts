@@ -2,6 +2,7 @@ import { Stencil } from '../models/frame.model';
 import { BG } from '../stencils/colors';
 import { StickerImage } from '../stickers/sticker.model';
 import { SAFE_ID } from '../models/ids';
+import { fetchJson } from './json-fetch';
 
 // stencils.json, written by scripts/face-frame-stencils.mjs or served from the stencil zip:
 // { "version": 1, "stencils": [{ "id": "img-star-ring", "file": "star-ring.png", "label": "Star ring",
@@ -126,26 +127,12 @@ export function loadStencilManifest(url: string): Promise<StencilManifest> {
 async function fetchManifest(url: string): Promise<StencilManifest> {
   const parsed = resolveManifestUrl(url);
   if (parsed.origin !== location.origin || !MANIFEST_PATH.test(parsed.pathname)) {
-    throw new Error(`stencil manifest must be a same-origin .json file: ${url}`);
+    throw new Error('stencil manifest must be a same-origin .json file');
   }
-  const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), LOAD_TIMEOUT_MS);
-  let response: Response;
-  try {
-    // no-cache: the browser revalidates, so a reload after a deployment gets the new list
-    response = await fetch(parsed.href, {
-      credentials: 'same-origin',
-      cache: 'no-cache',
-      redirect: 'error',
-      signal: abort.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!response.ok) {
-    throw new Error(`stencil manifest ${url}: HTTP ${response.status}`);
-  }
-  return parseStencilManifest(await response.json(), parsed.href);
+  return parseStencilManifest(
+    await fetchJson(parsed.href, LOAD_TIMEOUT_MS, 'stencil manifest'),
+    parsed.href,
+  );
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

@@ -50,7 +50,7 @@ export class StencilFinder {
   );
   /** roving tabindex: only one card is in the tab order */
   readonly focusableId = computed(() =>
-    this.selectedHidden() ? this.visible()[0]?.id : this.selectedId(),
+    this.selected() && !this.selectedHidden() ? this.selectedId() : this.visible()[0]?.id,
   );
   readonly resultText = computed(() => {
     const count = this.editor

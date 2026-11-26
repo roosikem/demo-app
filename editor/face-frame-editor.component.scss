@@ -106,6 +106,9 @@
   justify-content: space-between;
   gap: 8px;
 }
+.ff-toolbar-foot {
+  flex-wrap: wrap;
+}
 .ff-hint {
   display: inline-flex;
   gap: 6px;

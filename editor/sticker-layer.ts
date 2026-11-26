@@ -17,7 +17,8 @@ import { EditorContext } from './editor-context';
 import { ServerSources } from './server-sources';
 
 // Stickers on the photo (options.features.stickers): adding and removing them, which one is selected, dragging
-// them, and loading the images of image stickers.
+// them, and loading the images of image stickers. Stickers belong to the customized circle: while a premade stencil
+// is applied they are hidden and left out of the image, but stay saved and come back with the customized circle.
 
 export class StickerLayer {
   readonly max = MAX_STICKERS;
@@ -25,7 +26,7 @@ export class StickerLayer {
   /** The stickers of the design. An image sticker whose image is no longer in stencils.json is left out. */
   readonly list = computed(
     () => {
-      const saved = this.enabled() ? this.editor.state().stickers : undefined;
+      const saved = this.active() ? this.editor.state().stickers : undefined;
       if (!saved?.length) {
         return NO_STICKERS;
       }
@@ -40,7 +41,7 @@ export class StickerLayer {
   );
   /** image stickers offered next to the emojis */
   readonly images = computed(() =>
-    this.enabled() ? this.sources.stickerImages() : NO_STICKER_IMAGES,
+    this.active() ? this.sources.stickerImages() : NO_STICKER_IMAGES,
   );
   readonly loadedImages = signal<ReadonlyMap<string, HTMLImageElement>>(new Map());
   /** the image stickers used in the design */
@@ -69,7 +70,8 @@ export class StickerLayer {
     commit: (command) => this.apply(command),
   });
 
-  private readonly enabled = computed(() => this.editor.opts().features.stickers);
+  /** switched on and no premade stencil applied */
+  readonly active = computed(() => this.editor.opts().features.stickers && !this.stencilApplied());
   private readonly selectedId = signal<string | null>(null);
   private readonly announcement = signal('');
   private readonly requestedImages = new Set<string>();
@@ -77,10 +79,11 @@ export class StickerLayer {
   constructor(
     private readonly editor: EditorContext,
     private readonly sources: ServerSources,
+    private readonly stencilApplied: () => boolean,
   ) {
-    // switched off, also in the middle of a drag
+    // switched off or a stencil applied, also in the middle of a drag
     effect(() => {
-      if (!this.enabled()) {
+      if (!this.active()) {
         untracked(() => this.clear());
       }
     });
@@ -196,8 +199,8 @@ export class StickerLayer {
   }
 
   private apply(command: StickerCommand): void {
-    // the list is empty while the feature is off: saving it would delete the user's stickers
-    if (!this.enabled()) {
+    // the list is empty while the feature is off or hidden: saving it would delete the user's stickers
+    if (!this.active()) {
       return;
     }
     const before = this.list();

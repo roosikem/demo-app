@@ -37,17 +37,15 @@ export interface FrameLabels {
   readonly badgeTextColor: string;
   readonly badgeIcon: string;
   readonly badgeSize: string;
-  readonly badgePosition: string;
   readonly moveBadge: string;
-  readonly resetBadgePosition: string;
   readonly badgeHint: string;
   readonly badgeSelected: string;
-  readonly textPosition: string;
   readonly noStencils: string;
   readonly stencilsLoading: string;
   readonly moveTopText: string;
   readonly moveBottomText: string;
-  readonly resetTextPositions: string;
+  /** puts the badge and the ring texts back where the design has them */
+  readonly resetPositions: string;
   readonly textHint: string;
   readonly textSelected: string;
   readonly stickers: string;
@@ -56,6 +54,8 @@ export interface FrameLabels {
   readonly stickerItem: string;
   readonly removeSticker: string;
   readonly stickerHint: string;
+  /** name of the info button that shows stickerHint as a tooltip */
+  readonly stickerHelp: string;
   readonly stickerSelected: string;
   readonly stickerLimit: string;
   readonly stickerRemoved: string;
@@ -67,6 +67,9 @@ export interface FrameLabels {
   readonly smallPreview: string;
   readonly format: string;
   readonly download: string;
+  readonly downloadStencil: string;
+  /** what "Download as stencil" saves; screen reader and tooltip */
+  readonly downloadStencilHint: string;
   readonly showInPhoto: string;
   readonly resetPhotoView: string;
   readonly loadError: string;
@@ -141,17 +144,14 @@ export const DEFAULT_LABELS: FrameLabels = deepFreeze({
   badgeTextColor: 'Badge text colour',
   badgeIcon: 'Icon',
   badgeSize: 'Badge size',
-  badgePosition: 'Badge position',
   moveBadge: 'Move badge',
-  resetBadgePosition: 'Reset position',
   badgeHint: 'Drag the badge, or select it and use the arrow keys (Shift for bigger steps).',
   badgeSelected: 'Badge selected. The arrow keys move it, Escape ends.',
-  textPosition: 'Text position',
   noStencils: 'No premade stencils available.',
   stencilsLoading: 'Loading premade stencils…',
   moveTopText: 'Move top text',
   moveBottomText: 'Move bottom text',
-  resetTextPositions: 'Reset positions',
+  resetPositions: 'Reset positions',
   textHint: 'Drag a text along the ring, or select it and use the left and right arrow keys.',
   textSelected:
     '{text} selected. The left and right arrow keys move it along the ring, Escape ends.',
@@ -162,6 +162,7 @@ export const DEFAULT_LABELS: FrameLabels = deepFreeze({
   removeSticker: 'Remove',
   stickerHint:
     'Drag to move · Corner: size · Round handle: rotate · Keys: arrows, + / −, R, Delete',
+  stickerHelp: 'How to use stickers',
   stickerSelected: 'Sticker {n} selected',
   stickerLimit: 'Up to {max} stickers',
   stickerRemoved: 'Sticker removed',
@@ -172,6 +173,9 @@ export const DEFAULT_LABELS: FrameLabels = deepFreeze({
   smallPreview: 'As shown in chats',
   format: 'Download format',
   download: 'Download image',
+  downloadStencil: 'Download as stencil',
+  downloadStencilHint:
+    'Saves the frame without your photo and stickers, as a 1024 px PNG for premade stencils.',
   showInPhoto: 'Show in my photo',
   resetPhotoView: 'Reset to original photo',
   loadError: 'The photo could not be loaded.',

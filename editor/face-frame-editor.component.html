@@ -117,87 +117,99 @@
             <small class="ff-hint" [id]="uid + '-drag-hint'"
               ><app-ff-icon name="move" [size]="14" />{{ labels().dragHintShort }}</small
             >
-            <button type="button" class="ff-ghost" [disabled]="!hasImage()" (click)="resetPhoto()">
-              <app-ff-icon name="reset" [size]="16" />{{ labels().reset }}
-            </button>
+            <div class="ff-toolbar-actions">
+              <ng-container [ngTemplateOutlet]="positionTools" />
+              <button
+                type="button"
+                class="ff-ghost"
+                [disabled]="!hasImage()"
+                (click)="resetPhoto()"
+              >
+                <app-ff-icon name="reset" [size]="16" />{{ labels().reset }}
+              </button>
+            </div>
+          </div>
+        </div>
+      } @else if (badge.movable() || texts.movable()) {
+        <div class="ff-toolbar-foot">
+          <div class="ff-toolbar-actions">
+            <ng-container [ngTemplateOutlet]="positionTools" />
           </div>
         </div>
       }
 
-      @if (badge.movable()) {
-        <div
-          class="ff-field ff-badge-position"
-          role="group"
-          [attr.aria-label]="labels().badgePosition"
-        >
-          <span class="ff-label">{{ labels().badgePosition }}</span>
-          <div class="ff-badge-actions">
-            <button
-              type="button"
-              class="ff-ghost"
-              [disabled]="!hasImage()"
-              [attr.aria-pressed]="badge.selected()"
-              (click)="badge.toggleAndFocus()"
-            >
-              {{ labels().moveBadge }}
-            </button>
-            <button
-              type="button"
-              class="ff-ghost"
-              [disabled]="!badge.moved()"
-              (click)="badge.reset()"
-            >
-              {{ labels().resetBadgePosition }}
-            </button>
-          </div>
-          <small class="ff-hint" [id]="uid + '-badge-hint'">{{ labels().badgeHint }}</small>
-          <span class="ff-sr" role="status">{{ badge.status() }}</span>
-        </div>
-      }
+      <!-- moving the badge and the ring texts without a mouse; dragging on the preview does the same -->
+      <ng-template #positionTools>
+        @if (badge.movable()) {
+          <button
+            type="button"
+            class="ff-iconbtn"
+            [disabled]="!hasImage()"
+            [attr.aria-pressed]="badge.selected()"
+            [attr.aria-label]="labels().moveBadge"
+            [title]="labels().moveBadge"
+            (click)="badge.toggleAndFocus()"
+          >
+            <app-ff-icon name="move-badge" />
+          </button>
+          <span class="ff-sr" [id]="uid + '-badge-hint'">{{ labels().badgeHint }}</span>
+          <span class="ff-sr ff-badge-status" role="status">{{ badge.status() }}</span>
+        }
+        @if (texts.movable()) {
+          <button
+            type="button"
+            class="ff-iconbtn"
+            [disabled]="!hasImage() || !custom().topText.trim()"
+            [attr.aria-pressed]="texts.selected() === 0"
+            [attr.aria-label]="labels().moveTopText"
+            [title]="labels().moveTopText"
+            (click)="texts.toggleAndFocus(0)"
+          >
+            <app-ff-icon name="move-top-text" />
+          </button>
+          <button
+            type="button"
+            class="ff-iconbtn"
+            [disabled]="!hasImage() || !custom().bottomText.trim()"
+            [attr.aria-pressed]="texts.selected() === 1"
+            [attr.aria-label]="labels().moveBottomText"
+            [title]="labels().moveBottomText"
+            (click)="texts.toggleAndFocus(1)"
+          >
+            <app-ff-icon name="move-bottom-text" />
+          </button>
+          <span class="ff-sr" [id]="uid + '-text-hint'">{{ labels().textHint }}</span>
+          <span class="ff-sr ff-text-status" role="status">{{ texts.status() }}</span>
+        }
+        @if (badge.movable() || texts.movable()) {
+          <button
+            type="button"
+            class="ff-iconbtn"
+            [disabled]="!badge.moved() && !texts.moved()"
+            [attr.aria-label]="labels().resetPositions"
+            [title]="labels().resetPositions"
+            (click)="resetPositions()"
+          >
+            <app-ff-icon name="reset-positions" />
+          </button>
+        }
+      </ng-template>
 
-      @if (texts.movable()) {
-        <div
-          class="ff-field ff-text-position"
-          role="group"
-          [attr.aria-label]="labels().textPosition"
-        >
-          <span class="ff-label">{{ labels().textPosition }}</span>
-          <div class="ff-badge-actions">
-            <button
-              type="button"
-              class="ff-ghost"
-              [disabled]="!hasImage() || !custom().topText.trim()"
-              [attr.aria-pressed]="texts.selected() === 0"
-              (click)="texts.toggleAndFocus(0)"
-            >
-              {{ labels().moveTopText }}
-            </button>
-            <button
-              type="button"
-              class="ff-ghost"
-              [disabled]="!hasImage() || !custom().bottomText.trim()"
-              [attr.aria-pressed]="texts.selected() === 1"
-              (click)="texts.toggleAndFocus(1)"
-            >
-              {{ labels().moveBottomText }}
-            </button>
-            <button
-              type="button"
-              class="ff-ghost"
-              [disabled]="!texts.moved()"
-              (click)="texts.reset()"
-            >
-              {{ labels().resetTextPositions }}
-            </button>
-          </div>
-          <small class="ff-hint" [id]="uid + '-text-hint'">{{ labels().textHint }}</small>
-          <span class="ff-sr" role="status">{{ texts.status() }}</span>
-        </div>
-      }
-
-      @if (f.stickers) {
+      @if (stickers.active()) {
         <div class="ff-stickers" role="group" [attr.aria-label]="labels().stickers">
-          <span class="ff-label">{{ labels().stickers }}</span>
+          <div class="ff-label-row">
+            <span class="ff-label">{{ labels().stickers }}</span>
+            <!-- the how-to as a tooltip on hover and keyboard focus, to keep the row short -->
+            <button
+              type="button"
+              class="ff-tip"
+              [attr.aria-label]="labels().stickerHelp"
+              [attr.aria-describedby]="uid + '-sticker-hint'"
+              [attr.data-tip]="labels().stickerHint"
+            >
+              <app-ff-icon name="info" [size]="16" />
+            </button>
+          </div>
           <div class="ff-sticker-palette">
             @for (emoji of o.stickerEmojis; track emoji; let first = $first) {
               <button
@@ -268,7 +280,7 @@
           @if (stickers.list().length >= stickers.max) {
             <small class="ff-hint">{{ stickers.limitText() }}</small>
           }
-          <small class="ff-hint" [id]="uid + '-sticker-hint'">{{ labels().stickerHint }}</small>
+          <span class="ff-sr" [id]="uid + '-sticker-hint'">{{ labels().stickerHint }}</span>
           <span class="ff-sr" role="status">{{ stickers.status() }}</span>
         </div>
       }
@@ -286,7 +298,7 @@
         </div>
       }
 
-      @if (f.showInPhoto || f.download) {
+      @if (f.showInPhoto || f.download || canCreateStencil()) {
         <div class="ff-actions">
           @if (f.showInPhoto) {
             @if (shownInPhoto()) {
@@ -341,6 +353,20 @@
                 <app-ff-icon name="download" />{{ labels().download }}
               </button>
             </div>
+          }
+          @if (canCreateStencil()) {
+            <button
+              type="button"
+              class="ff-btn ff-btn--secondary"
+              [title]="labels().downloadStencilHint"
+              [attr.aria-describedby]="uid + '-stencil-hint'"
+              (click)="downloadStencil()"
+            >
+              <app-ff-icon name="download" />{{ labels().downloadStencil }}
+            </button>
+            <span class="ff-sr" [id]="uid + '-stencil-hint'">{{
+              labels().downloadStencilHint
+            }}</span>
           }
         </div>
       }

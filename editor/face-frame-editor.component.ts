@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,6 +32,7 @@ import {
   MAX_EXPORT_SIZE,
   MIN_EXPORT_SIZE,
   mergeFaceFrameOptions,
+  stencilFileName,
 } from '../config/face-frame-options';
 import { clamp } from '../models/numbers';
 import {
@@ -48,6 +50,7 @@ import {
   contrastRatio,
   geometry,
   renderFrame,
+  renderStencilToBlob,
   renderToBlob,
   solidRingColor,
 } from '../rendering/frame-renderer';
@@ -76,6 +79,7 @@ import { BadgeMover, withBadgeAt } from './badge-mover';
 import { EditorContext, Selectable, Tab } from './editor-context';
 import { StencilImageCache } from './stencil-image-cache';
 import { TextMeasure } from './text-measure';
+import { PhotoLoader } from './photo-loader';
 import { ServerSources } from './server-sources';
 import { StencilFinder } from './stencil-finder';
 import { StencilThumbnails } from './stencil-thumbnails';
@@ -96,7 +100,7 @@ let nextId = 0;
 
 @Component({
   selector: 'app-face-frame-editor',
-  imports: [ColorPickerComponent, FfIconComponent],
+  imports: [NgTemplateOutlet, ColorPickerComponent, FfIconComponent],
   templateUrl: './face-frame-editor.component.html',
   styleUrls: [
     './face-frame-editor.component.scss',
@@ -204,6 +208,9 @@ export class FaceFrameEditorComponent implements OnDestroy {
     }
     return customTab ? this.current().tab : 'stencils';
   });
+  protected readonly canCreateStencil = computed(
+    () => this.features().stencilCreationAllowed && this.tab() === 'custom',
+  );
   protected readonly custom = computed(() => this.current().custom);
   protected readonly badgePercent = computed(() => this.custom().badgeSize ?? BADGE_SIZE.initial);
   protected readonly stencilId = computed(() => this.current().stencilId);
@@ -230,13 +237,24 @@ export class FaceFrameEditorComponent implements OnDestroy {
     select: (id) => this.selectStencil(id),
     scrollTo: (id, focus) => this.scrollToStencil(id, focus),
   });
-  /** the stencil in the preview: the first one while the saved stencil is not (yet) available */
-  private readonly shownStencil = computed(() => this.finder.selected() ?? this.opts().stencils[0]);
+  /**
+   * The stencil in the preview: the one the user picked. Until then the Premade stencils tab shows the customized
+   * circle; without a Customized circle tab it shows the first stencil.
+   */
+  private readonly shownStencil = computed(
+    () =>
+      this.finder.selected() ?? (this.features().customTab ? undefined : this.opts().stencils[0]),
+  );
+
+  /** the premade stencil in the preview; undefined while the customized circle is shown */
+  private readonly appliedStencil = computed(() =>
+    this.tab() === 'stencils' ? this.shownStencil() : undefined,
+  );
 
   /** The frame as designed, with the badge at its designed place. */
   private readonly designedConfig = computed<FrameConfig>(() => {
     const o = this.opts();
-    const stencil = this.tab() === 'stencils' ? this.shownStencil() : undefined;
+    const stencil = this.appliedStencil();
     if (stencil) {
       return this.stencilConfig(stencil);
     }
@@ -267,7 +285,11 @@ export class FaceFrameEditorComponent implements OnDestroy {
   });
   readonly config: Signal<FrameConfig> = computed(() => this.badge.applyTo(this.textsPlaced()));
 
-  protected readonly stickers = new StickerLayer(this.context, this.sources);
+  protected readonly stickers = new StickerLayer(
+    this.context,
+    this.sources,
+    () => this.appliedStencil() !== undefined,
+  );
 
   private readonly image = signal<HTMLImageElement | null>(null);
   readonly hasImage = computed(() => this.image() !== null);
@@ -293,7 +315,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
   protected readonly previewDescribedBy = computed(() =>
     [
       'drag-hint',
-      this.features().stickers ? 'sticker-hint' : '',
+      this.stickers.active() ? 'sticker-hint' : '',
       this.badge.movable() ? 'badge-hint' : '',
       this.texts.movable() ? 'text-hint' : '',
     ]
@@ -308,10 +330,11 @@ export class FaceFrameEditorComponent implements OnDestroy {
     () =>
       this.sources.manifestPending() &&
       this.tab() === 'stencils' &&
+      (!!this.stencilId() || !this.features().customTab) &&
       !this.opts().stencils.some((s) => s.id === this.stencilId()),
   );
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('preview');
-  private objectUrl: string | null = null;
+  private readonly photoLoader = new PhotoLoader();
   private drag: { pointerId: number; x: number; y: number; start: PhotoTransform } | null = null;
   private exporting = false;
   private exportAgain = false;
@@ -323,7 +346,9 @@ export class FaceFrameEditorComponent implements OnDestroy {
       const source = this.source();
       let cancelled = false;
       onCleanup(() => (cancelled = true));
-      this.load(source).then(
+      // the image hosts are read once per photo: an options change must not load the photo again
+      const imageHosts = untracked(() => this.opts().imageHosts);
+      this.photoLoader.load(source, imageHosts).then(
         (img) => {
           if (!cancelled) {
             this.image.set(img);
@@ -403,7 +428,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.revokeObjectUrl();
+    this.photoLoader.release();
   }
 
   async exportImage(size?: number, format?: ExportFormat): Promise<Blob> {
@@ -475,6 +500,15 @@ export class FaceFrameEditorComponent implements OnDestroy {
     this.update({ photo: initialFaceFrameState(this.opts()).photo });
   }
 
+  protected resetPositions(): void {
+    if (this.badge.moved()) {
+      this.badge.reset();
+    }
+    if (this.texts.moved()) {
+      this.texts.reset();
+    }
+  }
+
   protected resetCustom(): void {
     this.update({ custom: this.opts().defaultCustom });
   }
@@ -517,16 +551,31 @@ export class FaceFrameEditorComponent implements OnDestroy {
     try {
       const blob = await this.exportImage(size, format);
       const name = `${fileName}.${format === 'image/jpeg' ? 'jpg' : 'png'}`;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.saveFile(blob, name);
       this.downloaded.emit({ blob, fileName: name });
     } catch (cause) {
       this.frameError.emit({ key: 'DOWNLOAD_FAILED', cause });
     }
+  }
+
+  /** The customized circle without the photo, as a 1024 px PNG for the stencil zip; not a `downloaded` event. */
+  protected async downloadStencil(): Promise<void> {
+    try {
+      // always the stencil size, whatever the download size is
+      const blob = await renderStencilToBlob(this.config());
+      this.saveFile(blob, stencilFileName(this.opts().download.fileName));
+    } catch (cause) {
+      this.frameError.emit({ key: 'DOWNLOAD_FAILED', cause });
+    }
+  }
+
+  private saveFile(blob: Blob, name: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   protected tr(text: string): string {
@@ -577,7 +626,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
     }
     const canvas = event.currentTarget as HTMLElement;
     if (
-      (this.features().stickers && this.stickers.gestures.pointerDown(event, canvas)) ||
+      (this.stickers.active() && this.stickers.gestures.pointerDown(event, canvas)) ||
       (this.features().badgeMove && this.badge.gestures.pointerDown(event, canvas)) ||
       (this.texts.movable() && this.texts.gestures.pointerDown(event, canvas))
     ) {
@@ -653,7 +702,7 @@ export class FaceFrameEditorComponent implements OnDestroy {
     if (
       this.badge.gestures.keyDown(event) ||
       this.texts.gestures.keyDown(event) ||
-      (this.features().stickers && this.stickers.gestures.keyDown(event))
+      (this.stickers.active() && this.stickers.gestures.keyDown(event))
     ) {
       return;
     }
@@ -675,9 +724,9 @@ export class FaceFrameEditorComponent implements OnDestroy {
     }
   }
 
-  /** A sticker gesture that is still running after the feature was switched off is dropped. */
+  /** A sticker gesture that is still running after the feature was switched off or a stencil applied is dropped. */
   private stickerStep(event: PointerEvent, step: () => boolean): boolean {
-    return this.features().stickers ? step() : this.stickers.gestures.cancel(event.pointerId);
+    return this.stickers.active() ? step() : this.stickers.gestures.cancel(event.pointerId);
   }
 
   private claimSelection(part: Selectable): void {
@@ -873,31 +922,6 @@ export class FaceFrameEditorComponent implements OnDestroy {
         this.frameError.emit({ key: 'STENCIL_LOAD_FAILED', cause });
       }
       return '';
-    }
-  }
-
-  private async load(source: Blob | string | null): Promise<HTMLImageElement | null> {
-    this.revokeObjectUrl();
-    if (!source) {
-      return null;
-    }
-    const img = new Image();
-    if (typeof source === 'string') {
-      // remote URLs need CORS, otherwise toBlob() fails on a tainted canvas
-      img.crossOrigin = 'anonymous';
-      img.src = source;
-    } else {
-      this.objectUrl = URL.createObjectURL(source);
-      img.src = this.objectUrl;
-    }
-    await img.decode();
-    return img;
-  }
-
-  private revokeObjectUrl(): void {
-    if (this.objectUrl) {
-      URL.revokeObjectURL(this.objectUrl);
-      this.objectUrl = null;
     }
   }
 }

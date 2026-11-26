@@ -35,6 +35,8 @@ export interface FaceFrameFeatures {
   readonly badgeMove: boolean;
   /** The texts of the customized circle can be moved along the ring, never onto each other; on by default. */
   readonly textMove: boolean;
+  /** "Download as stencil" on the customized circle tab: the frame without the photo, for the stencil zip; off by default. */
+  readonly stencilCreationAllowed: boolean;
 }
 
 /** Limits for a moved round badge (features.badgeMove). */
@@ -117,6 +119,15 @@ export const MAX_EXPORT_SIZE = 4096;
 const DEFAULT_FILE_NAME = 'profile-photo';
 export const SAFE_FILE_NAME = /^[\w.-]{1,64}$/;
 
+/** Download name of "Download as stencil": also a valid stencil file name (letters, digits, - and _). */
+export function stencilFileName(fileName: string): string {
+  const base = fileName
+    .replace(/[^A-Za-z0-9_-]+/g, '-')
+    .replace(/^[^A-Za-z0-9]+/, '')
+    .slice(0, 52);
+  return `${base || 'frame'}-stencil.png`;
+}
+
 export const DEFAULT_FACE_FRAME_OPTIONS: FaceFrameOptions = deepFreeze({
   // premade stencils come from the server (stencilManifest); an app can add its own here
   stencils: [],
@@ -150,6 +161,7 @@ export const DEFAULT_FACE_FRAME_OPTIONS: FaceFrameOptions = deepFreeze({
     stickers: false,
     badgeMove: true,
     textMove: true,
+    stencilCreationAllowed: false,
   },
   badgeMovement: { restrictInsideFrame: true, restrictOnText: false },
   translate: (text) => text,

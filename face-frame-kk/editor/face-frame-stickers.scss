@@ -1,0 +1,106 @@
+.ff-stickers {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ff-border);
+}
+.ff-sticker-palette,
+.ff-sticker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ff-sticker-add,
+.ff-sticker-pick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  border: 1px solid var(--ff-border);
+  border-radius: var(--ff-r);
+  background: var(--ff-surface);
+  color: var(--ff-text-2);
+  font: inherit;
+  cursor: pointer;
+}
+.ff-sticker-add {
+  font-size: 20px;
+}
+.ff-sticker-add:hover:not(:disabled),
+.ff-sticker-pick:hover {
+  background: var(--ff-soft);
+}
+.ff-sticker-add:disabled,
+.ff-sticker-add[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ff-sticker-pick[aria-pressed='true'] {
+  border-color: var(--ff-primary);
+  box-shadow: 0 0 0 3px var(--ff-ring);
+}
+.ff-sticker-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ff-sticker-list li {
+  display: inline-flex;
+  align-items: center;
+}
+.ff-sticker-add--image img,
+.ff-sticker-pick img {
+  display: block;
+  object-fit: contain;
+}
+
+.ff-label-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ff-tip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ff-muted);
+  cursor: help;
+}
+.ff-tip:hover,
+.ff-tip:focus-visible {
+  color: var(--ff-primary);
+}
+.ff-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: var(--ff-r);
+  background: var(--ff-text);
+  color: var(--ff-surface);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.ff-tip:hover::after,
+.ff-tip:focus-visible::after {
+  opacity: 1;
+}

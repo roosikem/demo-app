@@ -286,13 +286,14 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.ff-badge-position,
-.ff-text-position {
-  padding: 12px 0 0;
-}
-.ff-badge-actions {
+.ff-toolbar-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 6px 0;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.ff-iconbtn[aria-pressed='true'] {
+  border-color: var(--ff-primary);
+  background: var(--ff-primary-soft);
+  color: var(--ff-primary);
 }

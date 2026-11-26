@@ -32,7 +32,8 @@ exist is decided by the zip (add, remove or reorder entries in `stencils.json`).
 
 Notes:
 
-- The first stencil in the list is selected when the user opens the Premade stencils tab for the first time.
+- Opening the Premade stencils tab applies nothing: the preview keeps the customized circle until the user clicks a
+  stencil. Without a Customized circle tab (`features: {customTab: false}`) the first stencil is shown.
 - Without any stencil the tab shows "No premade stencils available." ("Loading premade stencils…" while
   `stencils.json` loads); to hide the tab: `features: {stencilsTab: false}`.
 - Categories, chips and the dropdown follow the list automatically (the chips "All" + one per category show as soon
@@ -43,8 +44,7 @@ Notes:
 ## Removing a stencil
 
 Remove its entry (and image) from the stencil zip, or from the app's list. Users who saved a design with that
-stencil get the first stencil of the list next time (photo position and stickers stay; with no stencils at all, the
-customized circle). Do not reuse the removed id for a different design later.
+stencil get the customized circle next time, until they pick another stencil (photo position and stickers stay). Do not reuse the removed id for a different design later.
 
 ## Coordinates
 
@@ -207,6 +207,10 @@ Images in `stickers/` become the `stickers` list (id and label from the file nam
 - Square 1024×1024 px **PNG only (no SVG, WebP, JPEG)**, transparent centre and corners, frame inside a circle of
   radius 504 px, centred.
 - Compressed, aim for < 200 KB per file (max. 1 MB for premade stencils).
+- Easiest way to make one: switch on `features.stencilCreationAllowed`, design it on the customized circle tab and
+  click "Download as stencil". The PNG meets these rules; rename it before adding it to the zip (the file name
+  becomes the stencil id and label), check it by eye (texts, logos) and run `node scripts/face-frame-stencils.mjs <folder>`
+  before zipping.
 - Served from the app (`assets/`) or from an https host listed in `options.imageHosts`; other URLs and other
   formats are dropped by the validation.
 

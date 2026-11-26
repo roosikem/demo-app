@@ -1,6 +1,8 @@
 // Loads the images of image stencils and image stickers, with a timeout.
 
 const LOAD_TIMEOUT_MS = 10000;
+/** stencils are 1024 px, stickers at most 1024 px; anything far larger is refused before it is drawn */
+const MAX_EDGE = 4096;
 const cache = new Map<string, Promise<HTMLImageElement>>();
 
 /**
@@ -14,10 +16,7 @@ export function loadStencilImage(url: string): Promise<HTMLImageElement> {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.referrerPolicy = 'no-referrer';
-      const timer = setTimeout(
-        () => fail(new Error(`Stencil image timed out: ${url}`)),
-        LOAD_TIMEOUT_MS,
-      );
+      const timer = setTimeout(() => fail(new Error('Stencil image timed out')), LOAD_TIMEOUT_MS);
       const fail = (error: Error): void => {
         clearTimeout(timer);
         img.onload = null;
@@ -27,10 +26,14 @@ export function loadStencilImage(url: string): Promise<HTMLImageElement> {
         reject(error);
       };
       img.onload = () => {
+        if (Math.max(img.naturalWidth, img.naturalHeight) > MAX_EDGE) {
+          fail(new Error('Stencil image is too large'));
+          return;
+        }
         clearTimeout(timer);
         resolve(img);
       };
-      img.onerror = () => fail(new Error(`Stencil image could not be loaded: ${url}`));
+      img.onerror = () => fail(new Error('Stencil image could not be loaded'));
       img.src = url;
     });
     cache.set(url, pending);

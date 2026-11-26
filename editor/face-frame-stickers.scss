@@ -56,3 +56,51 @@
   display: block;
   object-fit: contain;
 }
+
+.ff-label-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ff-tip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ff-muted);
+  cursor: help;
+}
+.ff-tip:hover,
+.ff-tip:focus-visible {
+  color: var(--ff-primary);
+}
+.ff-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: var(--ff-r);
+  background: var(--ff-text);
+  color: var(--ff-surface);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.ff-tip:hover::after,
+.ff-tip:focus-visible::after {
+  opacity: 1;
+}

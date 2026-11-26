@@ -67,20 +67,28 @@ export function sanitizeStencil(input: unknown, policy: StencilImagePolicy): Ste
 }
 
 export function isAllowedStencilImage(url: string, policy: StencilImagePolicy): boolean {
-  const base = typeof location === 'undefined' ? undefined : location.href;
+  return allowedStencilImageUrl(url, policy) !== null;
+}
+
+/**
+ * The absolute URL of a stencil image, or null when it is not allowed. Relative URLs are resolved against the
+ * document base (<base href>), as the browser loads them, and the absolute URL is kept: the checked address is
+ * the loaded one.
+ */
+export function allowedStencilImageUrl(url: string, policy: StencilImagePolicy): string | null {
+  const base = typeof document === 'undefined' ? undefined : document.baseURI;
   let parsed: URL;
   try {
     parsed = base ? new URL(url, base) : new URL(url);
   } catch {
-    return false;
+    return null;
   }
   if (!IMAGE_EXTENSIONS.test(parsed.pathname)) {
-    return false;
+    return null;
   }
-  if (base && parsed.origin === location.origin) {
-    return true;
-  }
-  return parsed.protocol === 'https:' && policy.imageHosts.includes(parsed.host);
+  const sameOrigin = typeof location !== 'undefined' && parsed.origin === location.origin;
+  const allowedHost = parsed.protocol === 'https:' && policy.imageHosts.includes(parsed.host);
+  return sameOrigin || allowedHost ? parsed.href : null;
 }
 
 /** 'CDN.Example.com', 'cdn.example.com:443' -> 'cdn.example.com'; other ports are kept; invalid -> null */
@@ -104,8 +112,8 @@ function sanitizeConfig(input: unknown, policy: StencilImagePolicy): FrameConfig
     ? input['decorations'].slice(0, MAX_DECORATIONS)
     : [];
   const image =
-    typeof input['image'] === 'string' && isAllowedStencilImage(input['image'], policy)
-      ? input['image']
+    typeof input['image'] === 'string'
+      ? (allowedStencilImageUrl(input['image'], policy) ?? undefined)
       : undefined;
   return {
     ring: sanitizeRing(input['ring']),

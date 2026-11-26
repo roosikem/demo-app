@@ -14,7 +14,8 @@
     "stencilDropdown": true,
     "stickers": false,
     "badgeMove": true,
-    "textMove": true
+    "textMove": true,
+    "stencilCreationAllowed": false
   },
   "badgeMovement": {
     "restrictInsideFrame": true,

@@ -37,7 +37,8 @@ export function initialFaceFrameState(o: FaceFrameOptions): FaceFrameState {
   return {
     tab: o.features.customTab || !o.features.stencilsTab ? 'custom' : 'stencils',
     custom: o.defaultCustom,
-    stencilId: o.stencils[0]?.id ?? '',
+    // with the customized circle as the alternative, a stencil is applied only when the user picks one
+    stencilId: o.features.customTab ? '' : (o.stencils[0]?.id ?? ''),
     // within the zoom range of the options, which may start above 1
     photo: sanitizePhoto(DEFAULT_PHOTO, o),
     downloadFormat: o.download.formats[0] ?? 'image/png',

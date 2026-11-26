@@ -72,6 +72,18 @@ export function renderFrame(
     ctx.fillRect(0, 0, size, size);
   }
   drawPhoto(ctx, g, config, image, photo);
+  drawOverPhoto(ctx, size, g, config, stencilImage);
+  ctx.restore();
+}
+
+/** Everything drawn over the photo: ring, stencil image, symbols, badge and texts. */
+function drawOverPhoto(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  g: Geometry,
+  config: FrameConfig,
+  stencilImage: HTMLImageElement | null,
+): void {
   if (config.ring) {
     drawRing(ctx, g, config.ring);
   }
@@ -87,6 +99,35 @@ export function renderFrame(
   for (const t of config.texts) {
     drawArcText(ctx, g, t);
   }
+}
+
+/** Premade image stencils are exactly this size (checked by the stencil script and the backend). */
+export const STENCIL_SIZE = 1024;
+
+/**
+ * The frame without the photo, as a PNG with a transparent middle: usable as a premade image stencil
+ * (stencil zip). Stickers are left out, like on every premade stencil.
+ */
+export function renderStencilToBlob(config: FrameConfig, size = STENCIL_SIZE): Promise<Blob> {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return Promise.reject(new Error('Canvas 2D is not available'));
+  }
+  renderStencil(ctx, size, config);
+  return canvasToBlob(canvas, 'image/png');
+}
+
+export function renderStencil(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  config: FrameConfig,
+): void {
+  ctx.save();
+  ctx.clearRect(0, 0, size, size);
+  drawOverPhoto(ctx, size, geometry(size, config), config, null);
   ctx.restore();
 }
 
